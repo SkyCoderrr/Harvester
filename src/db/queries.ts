@@ -179,6 +179,42 @@ export function updateTorrentEventInfohash(db: Db, id: number, infohash: string)
   db.prepare('UPDATE torrent_events SET infohash = ? WHERE id = ?').run(infohash, id);
 }
 
+export function getTorrentEventByInfohash(db: Db, infohash: string): TorrentEventRow | undefined {
+  return db
+    .prepare(
+      'SELECT * FROM torrent_events WHERE infohash = ? ORDER BY id DESC LIMIT 1',
+    )
+    .get(infohash) as TorrentEventRow | undefined;
+}
+
+// -- Torrent blacklist -----------------------------------------------------
+
+export interface TorrentBlacklistRow {
+  mteam_id: string;
+  infohash: string | null;
+  reason: string;
+  added_at: number;
+}
+
+export function isBlacklisted(db: Db, mteamId: string): boolean {
+  return (
+    db
+      .prepare('SELECT 1 FROM torrent_blacklist WHERE mteam_id = ? LIMIT 1')
+      .get(mteamId) != null
+  );
+}
+
+export function addToBlacklist(db: Db, row: TorrentBlacklistRow): void {
+  db.prepare(
+    `INSERT INTO torrent_blacklist (mteam_id, infohash, reason, added_at)
+     VALUES (?,?,?,?)
+     ON CONFLICT(mteam_id) DO UPDATE SET
+       infohash=excluded.infohash,
+       reason=excluded.reason,
+       added_at=excluded.added_at`,
+  ).run(row.mteam_id, row.infohash, row.reason, row.added_at);
+}
+
 export function countReEvals(db: Db, mteamId: string): number {
   const r = db
     .prepare(

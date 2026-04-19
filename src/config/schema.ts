@@ -72,6 +72,16 @@ export const configSchemaZ = z
         interval_sec: z.number().int().min(30).max(3600).default(60),
       })
       .default({ interval_sec: 60 }),
+    stuck_checker: z
+      .object({
+        enabled: z.boolean().default(true),
+        // Torrents in checkingDL / checkingUP / checkingResumeData / metaDL
+        // for longer than this are permanently removed + blacklisted.
+        stuck_timeout_sec: z.number().int().min(60).max(86400).default(1800),
+        // How often we scan qBt for stuck torrents.
+        interval_sec: z.number().int().min(30).max(3600).default(300),
+      })
+      .default({ enabled: true, stuck_timeout_sec: 1800, interval_sec: 300 }),
     disk_guard: z
       .object({
         enabled: z.boolean().default(true),

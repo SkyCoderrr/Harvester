@@ -18,7 +18,12 @@ export type DomainEvent =
   | {
       type: 'lifecycle.removed';
       infohash: string;
-      reason: 'seed_time' | 'zero_peers' | 'discount_flipped' | 'disk_guard';
+      reason:
+        | 'seed_time'
+        | 'zero_peers'
+        | 'discount_flipped'
+        | 'disk_guard'
+        | 'stuck_checking';
     }
   | { type: 'emergency.triggered'; ratio: number; tier_min: number }
   | { type: 'emergency.cleared' }

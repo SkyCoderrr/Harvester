@@ -19,6 +19,7 @@ import {
   getTorrentEventByMteamId,
   countReEvals,
   listRuleSetRows,
+  isBlacklisted,
 } from '../db/queries.js';
 import type { RuleSet, NormalizedTorrent } from '@shared/types.js';
 import { unixSec } from '../util/time.js';
@@ -69,6 +70,10 @@ export function createPoller(deps: {
 
       for (const raw of res.items) {
         const torrent = normalizeMTeamTorrent(raw);
+        // Blacklist gate: torrents the stuckChecker (or future watchdogs)
+        // have given up on are skipped silently — no event row, no grab
+        // attempt, no re-eval. See db/migrations/0007_torrent_blacklist.sql.
+        if (isBlacklisted(db, torrent.mteam_id)) continue;
         const existing = getTorrentEventByMteamId(db, torrent.mteam_id);
 
         if (existing) {

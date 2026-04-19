@@ -14,6 +14,7 @@ import { createStatsDailyRollupWorker } from './statsDailyRollup.js';
 import { createEmergencyMonitor } from './emergencyMonitor.js';
 import { createGrabRetryWorker } from './grabRetry.js';
 import { createDiskGuardWorker } from './diskGuard.js';
+import { createStuckCheckerWorker } from './stuckChecker.js';
 import { createDownloader, type Downloader } from './downloader.js';
 import type { LoopWorker } from './loopWorker.js';
 
@@ -55,6 +56,13 @@ export function startWorkers(deps: {
     config: deps.config,
     qbt: deps.qbt,
   });
+  const stuckChecker = createStuckCheckerWorker({
+    db: deps.db,
+    logger: deps.logger,
+    bus: deps.bus,
+    config: deps.config,
+    qbt: deps.qbt,
+  });
 
   const workers = [
     poller,
@@ -65,6 +73,7 @@ export function startWorkers(deps: {
     emergency,
     grabRetry,
     diskGuard,
+    stuckChecker,
   ];
   for (const w of workers) w.start();
   deps.logger.info({ component: 'workers' }, 'workers started');
