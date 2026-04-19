@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { usePersistedState } from '../../hooks/usePersistedState';
 import {
   Area,
   AreaChart,
@@ -41,8 +42,16 @@ export function SpeedCard(): JSX.Element {
     staleTime: 9_000,
     structuralSharing: true,
   });
-  const [scale, setScale] = useState<'linear' | 'log'>('linear');
-  const [view, setView] = useState<'split' | 'combined'>('split');
+  const [scale, setScale] = usePersistedState<'linear' | 'log'>(
+    'dashboard.speed.scale',
+    'linear',
+    (v): v is 'linear' | 'log' => v === 'linear' || v === 'log',
+  );
+  const [view, setView] = usePersistedState<'split' | 'combined'>(
+    'dashboard.speed.view',
+    'split',
+    (v): v is 'split' | 'combined' => v === 'split' || v === 'combined',
+  );
 
   const items = q.data?.items ?? [];
   const latest = items[items.length - 1];

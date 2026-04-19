@@ -41,6 +41,17 @@ export function evaluateOne(
     }
   }
 
+  // Step 2b: release-age gate. Rejects torrents uploaded longer ago than the
+  // user-configured ceiling. Null = no gate. `created_date_ts` is the
+  // release time on M-Team; `ageMin` is computed again in Step 5 for the
+  // first-seeder fast path, but we need a copy here too.
+  if (r.max_release_age_minutes != null) {
+    const ageMin = (Math.floor(now / 1000) - t.created_date_ts) / 60;
+    if (ageMin > r.max_release_age_minutes) {
+      return { pass: false, rejection_reason: 'max_release_age_minutes' };
+    }
+  }
+
   // Step 3: size
   const sizeGib = t.size_bytes / 2 ** 30;
   if (sizeGib < r.size_gib_min || sizeGib > r.size_gib_max) {

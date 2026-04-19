@@ -10,12 +10,17 @@ coverage/
 .DS_Store
 Thumbs.db
 
-# Editor
+# Editor / tooling
 .vscode/
 .idea/
+.cursor/
+.claude/
+*.swp
+*.swo
 
-# Runtime
+# Runtime state (Harvester config, sqlite DBs, rotated logs)
 .harvester/
+harvester-data/
 *.db
 *.db-wal
 *.db-shm
@@ -33,3 +38,18 @@ spike/.env.local
 # Env
 .env
 .env.local
+
+# Secrets — defensive catch-alls. The real user config lives at
+# %APPDATA%\Harvester\config.json (outside the repo) and is never tracked,
+# but these patterns keep any stray copies from ever landing in git.
+**/config.json
+!tsconfig*.json
+!package.json
+!package-lock.json
+*.env.*
+*.secret
+*.secrets
+secrets.*
+*.pem
+*.key
+credentials.json

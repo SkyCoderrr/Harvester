@@ -42,6 +42,9 @@ export const ruleSetV1Z = z
     title_regex_include: z.string().max(500).nullable(),
     title_regex_exclude: z.string().max(500).nullable(),
     free_disk_gib_min: z.number().min(0).max(1000000).nullable(),
+    // Null = no age gate. Range 1 min → 1 week. Defaulted at schema level so
+    // existing rule_sets in the DB that predate this field parse cleanly.
+    max_release_age_minutes: z.number().int().min(1).max(10080).nullable().default(null),
     first_seeder_fast_path: z
       .object({
         enabled: z.boolean(),

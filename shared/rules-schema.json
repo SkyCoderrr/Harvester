@@ -163,6 +163,19 @@
                 }
               ]
             },
+            "max_release_age_minutes": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10080
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
             "first_seeder_fast_path": {
               "anyOf": [
                 {

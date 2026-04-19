@@ -79,6 +79,13 @@ export interface RuleSetV1 {
   title_regex_include: string | null;
   title_regex_exclude: string | null;
   free_disk_gib_min: number | null;
+  /**
+   * Hard age gate. If non-null, only grab torrents whose `created_date_ts`
+   * (release time on M-Team) is within this many minutes of "now". Distinct
+   * from `first_seeder_fast_path.max_age_minutes`, which is a soft *bypass*
+   * for swarm checks during a grace window.
+   */
+  max_release_age_minutes: number | null;
   first_seeder_fast_path: {
     enabled: boolean;
     max_age_minutes: number;

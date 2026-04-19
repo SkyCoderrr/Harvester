@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { usePersistedState } from '../../hooks/usePersistedState';
 import {
   Area,
   AreaChart,
@@ -43,9 +44,11 @@ function hoursFor(w: Window): number {
 }
 
 export function RatioChart(): JSX.Element {
-  // FR-V2-24: ratio chart gains a window switcher. Default is 1h (preserves
-  // the v1 default "Ratio & bonus — 24h" default-feel).
-  const [win, setWin] = useState<Window>('1h');
+  const [win, setWin] = usePersistedState<Window>(
+    'dashboard.ratio.window',
+    '1h',
+    (v): v is Window => v === '1h' || v === '24h' || v === '7d' || v === '30d',
+  );
   const hours = hoursFor(win);
   const q = useQuery({
     queryKey: ['stats', 'profile-snapshots', hours],

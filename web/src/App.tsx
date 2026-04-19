@@ -147,10 +147,17 @@ function TopBar(): JSX.Element {
     if (refreshing) return;
     setRefreshing(true);
     try {
-      // Refetch every active query (dashboard, torrents, rules, stats, logs …).
+      // Force an out-of-band poll first so the dashboard reflects a fresh
+      // M-Team search, then refetch every active UI query. Swallowing the
+      // poll-now error keeps the button useful even when the service is
+      // paused or workers haven't booted — the UI still gets refreshed.
+      try {
+        await api.post('/api/service/poll-now');
+      } catch {
+        /* no-op: see note above */
+      }
       await qc.refetchQueries({ type: 'active' });
     } finally {
-      // Small delay so the spinner has perceivable feedback even on fast local server.
       setTimeout(() => setRefreshing(false), 300);
     }
   }

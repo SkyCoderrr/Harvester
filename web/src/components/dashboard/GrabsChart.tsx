@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { usePersistedState } from '../../hooks/usePersistedState';
 import {
   Bar,
   BarChart,
@@ -29,8 +30,11 @@ const OPTS: ReadonlyArray<{ value: Window; label: string }> = [
 ];
 
 export function GrabsChart(): JSX.Element {
-  // FR-V2-24: window switcher added; default 30d per V2 plan.
-  const [days, setDays] = useState<Window>('30');
+  const [days, setDays] = usePersistedState<Window>(
+    'dashboard.grabs.days',
+    '30',
+    (v): v is Window => v === '7' || v === '14' || v === '30' || v === '90',
+  );
   const q = useQuery({
     queryKey: ['stats', 'grabs-by-day', days],
     queryFn: () => api.get<{ items: GrabDay[] }>(`/api/stats/grabs-by-day?days=${days}`),
@@ -39,17 +43,47 @@ export function GrabsChart(): JSX.Element {
     structuralSharing: true,
   });
 
+  // Two bugs previously showed up here:
+  //   (1) counts on a given calendar day shifted when switching windows —
+  //       caused by a rolling `since` on the backend that left the oldest
+  //       day partial. Fixed server-side by anchoring `since` to local
+  //       midnight (see src/http/routes/stats.ts).
+  //   (2) days with zero grabs disappeared because GROUP BY returned no
+  //       row for them. Fix: pre-seed the full calendar range here and
+  //       overlay server rows on top.
   const pivot = useMemo(() => {
     const items = q.data?.items ?? [];
     const byDay = new Map<string, Record<string, number | string>>();
+    const discountSet = new Set<string>();
+
+    // Seed every day in the window with zeros so empty days still render.
+    const n = Number(days);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      byDay.set(key, { day: key });
+    }
+
     for (const r of items) {
       const day = r.day.slice(5); // MM-DD
       if (!byDay.has(day)) byDay.set(day, { day });
       byDay.get(day)![r.discount] = r.c;
+      discountSet.add(r.discount);
     }
-    const discounts = Array.from(new Set(items.map((i) => i.discount)));
+
+    // Fill zeros for every discount on every day so stacked bars are stable.
+    const discounts = Array.from(discountSet);
+    for (const row of byDay.values()) {
+      for (const d of discounts) {
+        if (row[d] == null) row[d] = 0;
+      }
+    }
+
     return { data: Array.from(byDay.values()), discounts };
-  }, [q.data]);
+  }, [q.data, days]);
 
   const right = (
     <SegmentedControl value={days} onChange={setDays} options={OPTS} aria-label="Grabs window" />

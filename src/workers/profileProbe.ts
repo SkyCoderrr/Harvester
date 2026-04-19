@@ -50,7 +50,7 @@ export function createProfileProbeWorker(deps: {
 
   return createLoopWorker({
     name: 'profileProbe',
-    intervalMs: () => 15 * 60 * 1000,
+    intervalMs: () => config.profile_probe.interval_sec * 1000,
     tick,
     logger,
   });

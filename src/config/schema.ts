@@ -31,8 +31,81 @@ export const configSchemaZ = z
       .object({
         interval_sec: z.number().int().min(60).max(3600).default(90),
         backoff_cap_sec: z.number().int().min(60).max(7200).default(1800),
+        // Re-evaluation — keep checking previously-skipped or errored
+        // torrents in subsequent polls. Duplicate downloads are blocked by
+        // two layers that bypass these knobs entirely: (a) canReEval only
+        // re-considers rows whose prior decision is SKIPPED_RULE /
+        // RE_EVALUATED_SKIPPED / ERROR, never GRABBED, and (b) the
+        // downloader does an infohash collision check against ALL qBt
+        // torrents before the add.
+        reeval: z
+          .object({
+            // How long after a torrent's first sighting we'll still
+            // reconsider it. Default is one week — previously 1 hour.
+            window_sec: z.number().int().min(60).max(30 * 86400).default(7 * 86400),
+            // Cap on re-eval attempts per torrent to bound churn. Default
+            // was 3; now 30 so the typical nightly re-check cycle has
+            // plenty of headroom.
+            max_attempts: z.number().int().min(1).max(1000).default(30),
+            // If a FREE window is about to expire, stop re-evaluating
+            // below this headroom so we don't race an expiring discount.
+            min_discount_headroom_sec: z
+              .number()
+              .int()
+              .min(0)
+              .max(86400)
+              .default(600),
+          })
+          .default({
+            window_sec: 7 * 86400,
+            max_attempts: 30,
+            min_discount_headroom_sec: 600,
+          }),
       })
-      .default({ interval_sec: 90, backoff_cap_sec: 1800 }),
+      .default({
+        interval_sec: 90,
+        backoff_cap_sec: 1800,
+        reeval: { window_sec: 7 * 86400, max_attempts: 30, min_discount_headroom_sec: 600 },
+      }),
+    profile_probe: z
+      .object({
+        interval_sec: z.number().int().min(30).max(3600).default(60),
+      })
+      .default({ interval_sec: 60 }),
+    disk_guard: z
+      .object({
+        enabled: z.boolean().default(true),
+        // Trigger eviction when free space drops below this.
+        low_free_gib: z.number().min(1).max(100000).default(50),
+        // Stop evicting once free space climbs back above this.
+        target_free_gib: z.number().min(1).max(100000).default(100),
+        // Safety floor: never delete torrents younger than this.
+        min_age_hours: z.number().min(0).max(720).default(6),
+        // How often the worker tick runs.
+        interval_sec: z.number().int().min(30).max(3600).default(300),
+        // Cap deletes per tick so a bad signal can't nuke the whole set.
+        max_delete_per_tick: z.number().int().min(1).max(100).default(10),
+        // Also delete data (not just remove from qBt).
+        remove_with_data: z.boolean().default(true),
+      })
+      .default({
+        enabled: true,
+        low_free_gib: 50,
+        target_free_gib: 100,
+        min_age_hours: 6,
+        interval_sec: 300,
+        max_delete_per_tick: 10,
+        remove_with_data: true,
+      })
+      .superRefine((v, ctx) => {
+        if (v.target_free_gib < v.low_free_gib) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['target_free_gib'],
+            message: 'target_free_gib must be >= low_free_gib',
+          });
+        }
+      }),
     downloads: z.object({
       default_save_path: z.string().min(1),
       soft_advisory_harvester_count: z.number().int().min(10).max(10000).default(100),

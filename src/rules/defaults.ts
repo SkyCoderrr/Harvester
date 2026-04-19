@@ -19,6 +19,7 @@ export const FACTORY_DEFAULT_RULE_SET: RuleSetInput = {
     title_regex_include: null,
     title_regex_exclude: null,
     free_disk_gib_min: 100,
+    max_release_age_minutes: null,
     first_seeder_fast_path: { enabled: true, max_age_minutes: 10 },
     qbt_category: 'mteam-auto',
     qbt_tags_extra: [],

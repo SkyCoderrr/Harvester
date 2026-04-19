@@ -23,11 +23,6 @@ import {
 import type { RuleSet, NormalizedTorrent } from '@shared/types.js';
 import { unixSec } from '../util/time.js';
 import { normalizeError } from '../errors/index.js';
-import {
-  REEVAL_MAX_ATTEMPTS,
-  REEVAL_MIN_DISCOUNT_HEADROOM_SEC,
-  REEVAL_WINDOW_SEC,
-} from '@shared/constants.js';
 
 export function createPoller(deps: {
   db: Db;
@@ -55,6 +50,12 @@ export function createPoller(deps: {
     const t0 = performance.now();
     let seen = 0;
     let grabbed = 0;
+    let skippedRule = 0;
+    let skippedDup = 0;
+    let skippedFlipped = 0;
+    let reGrabbed = 0;
+    let reSkipped = 0;
+    logger.info({ component: 'poller', poll_run_id: pollRunId }, 'poll tick started');
     try {
       const res = await mteam.search({
         mode: 'normal',
@@ -85,6 +86,7 @@ export function createPoller(deps: {
               // and inflated dashboard grab counts. Don't write here.
               await downloader.enqueue(torrent, decision.matched, pollRunId);
               grabbed++;
+              reGrabbed++;
               bus.emit('torrent.decision', {
                 type: 'torrent.decision',
                 mteam_id: torrent.mteam_id,
@@ -94,6 +96,7 @@ export function createPoller(deps: {
             } else if (decision.kind === 'SKIPPED_RULE') {
               const reason = decision.per_rule_set[0]?.rejection_reason ?? 'unknown';
               insertDecision(torrent, 'RE_EVALUATED_SKIPPED', null, reason);
+              reSkipped++;
             }
           }
           continue;
@@ -118,6 +121,7 @@ export function createPoller(deps: {
         } else if (decision.kind === 'SKIPPED_RULE') {
           const reason = decision.per_rule_set[0]?.rejection_reason ?? 'unknown';
           insertDecision(torrent, 'SKIPPED_RULE', null, reason);
+          skippedRule++;
           bus.emit('torrent.decision', {
             type: 'torrent.decision',
             mteam_id: torrent.mteam_id,
@@ -126,8 +130,10 @@ export function createPoller(deps: {
           });
         } else if (decision.kind === 'SKIPPED_DUP') {
           insertDecision(torrent, 'SKIPPED_DUP', null, null);
+          skippedDup++;
         } else if (decision.kind === 'SKIPPED_FLIPPED') {
           insertDecision(torrent, 'SKIPPED_FLIPPED', null, null);
+          skippedFlipped++;
         }
       }
 
@@ -143,6 +149,21 @@ export function createPoller(deps: {
         torrents_grabbed: grabbed,
       });
       cycleTimer.observe(performance.now() - t0);
+      logger.info(
+        {
+          component: 'poller',
+          poll_run_id: pollRunId,
+          seen,
+          grabbed,
+          re_grabbed: reGrabbed,
+          skipped_rule: skippedRule,
+          re_skipped: reSkipped,
+          skipped_dup: skippedDup,
+          skipped_flipped: skippedFlipped,
+          duration_ms: Math.round(performance.now() - t0),
+        },
+        'poll tick finished',
+      );
     } catch (err) {
       const normalized = normalizeError(err);
       finishPollRun(db, pollRunId, {
@@ -202,14 +223,15 @@ export function createPoller(deps: {
     if (!['SKIPPED_RULE', 'RE_EVALUATED_SKIPPED', 'ERROR'].includes(existing.decision)) {
       return false;
     }
-    if (unixSec() - existing.seen_at > REEVAL_WINDOW_SEC) return false;
+    const re = config.poller.reeval;
+    if (unixSec() - existing.seen_at > re.window_sec) return false;
     if (
       torrent.discount_end_ts != null &&
-      torrent.discount_end_ts - unixSec() < REEVAL_MIN_DISCOUNT_HEADROOM_SEC
+      torrent.discount_end_ts - unixSec() < re.min_discount_headroom_sec
     ) {
       return false;
     }
-    if (countReEvals(db, torrent.mteam_id) >= REEVAL_MAX_ATTEMPTS) return false;
+    if (countReEvals(db, torrent.mteam_id) >= re.max_attempts) return false;
     return true;
   }
 

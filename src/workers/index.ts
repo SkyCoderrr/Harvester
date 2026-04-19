@@ -13,6 +13,7 @@ import { createTransferProbeWorker } from './transferProbe.js';
 import { createStatsDailyRollupWorker } from './statsDailyRollup.js';
 import { createEmergencyMonitor } from './emergencyMonitor.js';
 import { createGrabRetryWorker } from './grabRetry.js';
+import { createDiskGuardWorker } from './diskGuard.js';
 import { createDownloader, type Downloader } from './downloader.js';
 import type { LoopWorker } from './loopWorker.js';
 
@@ -48,8 +49,23 @@ export function startWorkers(deps: {
     downloader,
     serviceState: deps.serviceState,
   });
+  const diskGuard = createDiskGuardWorker({
+    logger: deps.logger,
+    bus: deps.bus,
+    config: deps.config,
+    qbt: deps.qbt,
+  });
 
-  const workers = [poller, lifecycle, profile, transfer, statsDaily, emergency, grabRetry];
+  const workers = [
+    poller,
+    lifecycle,
+    profile,
+    transfer,
+    statsDaily,
+    emergency,
+    grabRetry,
+    diskGuard,
+  ];
   for (const w of workers) w.start();
   deps.logger.info({ component: 'workers' }, 'workers started');
 

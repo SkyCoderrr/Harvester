@@ -51,6 +51,8 @@ export interface HttpDeps {
   onUserResume?: () => Promise<void>;
   /** FR-V2-37: gracefully stop workers when the user pauses. */
   onUserPause?: () => Promise<void>;
+  /** Manual trigger — runs an out-of-band poller tick (fresh M-Team search). */
+  onPollNow?: () => Promise<void>;
 }
 
 export async function createHttpServer(deps: HttpDeps): Promise<FastifyInstance> {

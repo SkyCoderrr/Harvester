@@ -35,6 +35,9 @@ export function RuleCard({ rs }: { rs: RuleSet }): JSX.Element {
   const [maxSeeders, setMaxSeeders] = useState<number | null>(rs.rules.max_seeders);
   const [minLeechers, setMinLeechers] = useState<number | null>(rs.rules.min_leechers);
   const [maxLeechers, setMaxLeechers] = useState<number | null>(rs.rules.max_leechers ?? null);
+  const [maxAgeMin, setMaxAgeMin] = useState<number | null>(
+    rs.rules.max_release_age_minutes ?? null,
+  );
   const [schedule, setSchedule] = useState<ScheduleSpec | null>(rs.rules.schedule);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +52,7 @@ export function RuleCard({ rs }: { rs: RuleSet }): JSX.Element {
     setMaxSeeders(rs.rules.max_seeders);
     setMinLeechers(rs.rules.min_leechers);
     setMaxLeechers(rs.rules.max_leechers ?? null);
+    setMaxAgeMin(rs.rules.max_release_age_minutes ?? null);
     setSchedule(rs.rules.schedule);
   }, [rs]);
 
@@ -62,6 +66,7 @@ export function RuleCard({ rs }: { rs: RuleSet }): JSX.Element {
     maxSeeders !== rs.rules.max_seeders ||
     minLeechers !== rs.rules.min_leechers ||
     maxLeechers !== (rs.rules.max_leechers ?? null) ||
+    maxAgeMin !== (rs.rules.max_release_age_minutes ?? null) ||
     JSON.stringify(schedule) !== JSON.stringify(rs.rules.schedule) ||
     JSON.stringify([...whitelist].sort()) !==
       JSON.stringify([...rs.rules.discount_whitelist].sort());
@@ -82,6 +87,7 @@ export function RuleCard({ rs }: { rs: RuleSet }): JSX.Element {
           min_leechers: minLeechers,
           max_leechers: maxLeechers,
           leecher_seeder_ratio_min: rs.rules.leecher_seeder_ratio_min,
+          max_release_age_minutes: maxAgeMin,
           schedule,
         },
       };
@@ -271,6 +277,43 @@ export function RuleCard({ rs }: { rs: RuleSet }): JSX.Element {
                 min leechers must be ≤ max leechers
               </div>
             )}
+          </Field>
+
+          <Field
+            label="Release age limit (minutes)"
+            hint="Only grab torrents uploaded within this many minutes. Measured against M-Team's release time, not when we first saw it. Null = no limit."
+          >
+            <div className="flex items-center gap-3">
+              <NumInput
+                value={maxAgeMin ?? 0}
+                onChange={(v) => setMaxAgeMin(v)}
+                min={1}
+                max={10080}
+                step={1}
+                width={100}
+                disabled={maxAgeMin == null}
+              />
+              <span className="text-xs text-text-muted font-mono">min</span>
+              <button
+                type="button"
+                onClick={() => setMaxAgeMin(maxAgeMin == null ? 60 : null)}
+                className="text-xs text-text-muted hover:text-text-primary cursor-pointer"
+              >
+                {maxAgeMin == null ? 'enable' : 'clear'}
+              </button>
+              <div className="flex items-center gap-1.5 ml-2">
+                {[15, 30, 60, 180, 720].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setMaxAgeMin(n)}
+                    className="text-[10px] px-2 py-0.5 rounded border border-zinc-800 text-text-muted hover:text-text-primary hover:border-zinc-700 cursor-pointer"
+                  >
+                    {n < 60 ? `${n}m` : `${n / 60}h`}
+                  </button>
+                ))}
+              </div>
+            </div>
           </Field>
 
           <Field

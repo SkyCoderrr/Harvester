@@ -36,6 +36,25 @@ export function registerServiceRoutes(
     return { ok: true, data: { status: deps.serviceState.get().status } };
   });
 
+  // Manual poll trigger. Kicks off an out-of-band poll tick (or a no-op if
+  // workers are paused / not running). The LoopWorker's in-flight guard
+  // makes this safe to call back-to-back: a second request while one is
+  // running returns immediately without starting a duplicate tick.
+  app.post('/service/poll-now', async (req) => {
+    emptyServiceBody.parse(req.body);
+    if (!deps.onPollNow) {
+      return { ok: true, data: { ok: false, reason: 'poller not running' } };
+    }
+    deps.logger.info({ component: 'service' }, 'manual poll requested');
+    try {
+      await deps.onPollNow();
+      return { ok: true, data: { ok: true } };
+    } catch (err) {
+      deps.logger.warn({ component: 'service', err }, 'manual poll failed');
+      return { ok: true, data: { ok: false, reason: (err as Error).message } };
+    }
+  });
+
   app.post('/service/restart', async (req) => {
     emptyServiceBody.parse(req.body);
     // FR-V2-37: restart MUST preserve user intent. We don't touch

@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { usePersistedState } from '../../hooks/usePersistedState';
 import { Bar, BarChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../../api/client';
 import { formatBytesDecimal } from '../../lib/format';
@@ -30,7 +31,11 @@ const OPTS: ReadonlyArray<{ value: Window; label: string }> = [
 ];
 
 export function VolumeButterflyChart(): JSX.Element {
-  const [days, setDays] = useState<Window>('14');
+  const [days, setDays] = usePersistedState<Window>(
+    'dashboard.volume.days',
+    '14',
+    (v): v is Window => v === '7' || v === '14' || v === '30' || v === '90',
+  );
   const q = useQuery({
     queryKey: ['stats', 'profile-volume', days],
     queryFn: () =>

@@ -181,6 +181,15 @@ async function main(): Promise<void> {
     onRestart: () => {
       logger.info({ component: 'bootstrap' }, 'restart requested');
     },
+    onPollNow: async () => {
+      const p = workerSet?.workers.find((w) => w.name === 'poller');
+      if (!p) throw new Error('poller worker not running');
+      // LoopWorker.tick() delegates to the same guarded runTick() the
+      // scheduled timer uses — concurrent manual + scheduled calls collapse
+      // into one in-flight tick via the `running` flag, so no duplicate
+      // M-Team search fires.
+      await p.tick();
+    },
   });
 
   try {

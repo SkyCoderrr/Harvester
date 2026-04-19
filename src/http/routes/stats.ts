@@ -29,10 +29,14 @@ export function registerStatsRoutes(app: FastifyInstance, deps: HttpDeps): void 
   });
 
   // Grabs per local-day bucketed by discount. Default: last 14 days.
+  //
+  // `since` is anchored to LOCAL midnight (N - 1) days ago so the oldest day
+  // in the window is complete — a rolling `now - N*86400` cutoff would clip
+  // part of the oldest day and cause counts to shift when switching windows.
   app.get('/stats/grabs-by-day', async (req) => {
     const q = req.query as { days?: string };
     const days = Math.min(90, Math.max(1, Number(q.days ?? 14)));
-    const since = unixSec() - days * 86400;
+    const since = localMidnightEpoch(days);
     const rows = deps.db
       .prepare(
         `SELECT
@@ -144,6 +148,17 @@ export function registerStatsRoutes(app: FastifyInstance, deps: HttpDeps): void 
     const items = listStatsDaily(deps.db, from, to);
     return { ok: true, data: { items } };
   });
+}
+
+/**
+ * Epoch seconds of local midnight (N - 1) days ago. Used so "N days of grabs"
+ * includes exactly N full local calendar days ending today.
+ */
+function localMidnightEpoch(days: number): number {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - (days - 1));
+  return Math.floor(d.getTime() / 1000);
 }
 
 function stateGroup(qbtState: string): string {

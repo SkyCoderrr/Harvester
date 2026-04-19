@@ -111,7 +111,14 @@ export function registerRulesRoutes(app: FastifyInstance, deps: HttpDeps): void 
     const sample = Math.min(500, Math.max(1, body.sample_size ?? 200));
     const events = listRecentTorrentEvents(deps.db, sample);
     const cfg = deps.config.get();
-    const now_ms = body.simulate_at ?? Date.now();
+    // If the caller pins a specific simulate_at, honor it globally.
+    // Otherwise simulate each event at its own `seen_at` — that way
+    // time-sensitive rules (release-age gate, schedule, free-window
+    // headroom) answer "what would we have decided when we first saw
+    // this torrent?" rather than "what would we decide if these old
+    // events came through the poll right now?" (which is never useful —
+    // all events are already N minutes/hours old).
+    const pinnedNowMs = body.simulate_at ?? null;
 
     const items = events.map((e) => {
       let raw: MTeamTorrent;
@@ -128,7 +135,7 @@ export function registerRulesRoutes(app: FastifyInstance, deps: HttpDeps): void 
       const normalized = normalizeMTeamTorrent(raw);
       const ctx = {
         now_ms: Date.now(),
-        simulate_at_ms: now_ms,
+        simulate_at_ms: pinnedNowMs ?? e.seen_at * 1000,
         free_disk_gib: (p: string | null) => freeGib(p ?? cfg.downloads.default_save_path),
       };
       const result = evaluateOne(normalized, rs, ctx);
