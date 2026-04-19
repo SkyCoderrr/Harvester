@@ -47,12 +47,16 @@ if "%PORT%"=="" set PORT=5173
 
 echo Starting Harvester at http://%HOST%:%PORT%/ ...
 
-REM Launch the browser asynchronously via the open-browser helper. We
-REM used to do this with `powershell -Command "Start-Process ..."` but
-REM that swallowed the URL in some shells and the browser would land on
-REM the wrong port. The helper is plain cmd + `start ""` which is the
-REM canonical Windows URL handler.
-start "Harvester browser" /B "%SCRIPT_DIR%open-browser.bat" "http://%HOST%:%PORT%/"
+REM Launch the browser asynchronously ~3s after we call npm start so the
+REM server has time to bind. `start "" /B cmd /c ...` spawns a detached
+REM cmd that pings (sleeps), then hands the URL to the default browser
+REM via `start "" <url>`  the canonical Windows URL handler.
+REM
+REM The ^& is cmd's literal-separator escape so the whole compound
+REM command is consumed by the outer `start /B`. We also use `start ""`
+REM inline (empty window title) so cmd doesn't misinterpret the URL as
+REM the window title.
+start "" /B cmd /c ping -n 4 127.0.0.1 ^>nul ^& start "" http://%HOST%:%PORT%/
 
 call npm start
 set EXITCODE=%ERRORLEVEL%
