@@ -55,6 +55,15 @@ async function main(): Promise<void> {
     const cfg = configStore.get();
     if (!cfg.first_run_completed) return;
     if (workerSet) return;
+    // FR-V2-38: persisted user intent gates worker startup. The boot path
+    // never overwrites the intent — only an explicit /service/resume does.
+    if (serviceState.get().desired_user_intent === 'paused') {
+      logger.info(
+        { component: 'bootstrap' },
+        'workers not started: persisted user intent is paused',
+      );
+      return;
+    }
     const report = await runPreflight({ config: cfg, logger, mteam, qbt });
     serviceState.dispatch({
       type: 'PREFLIGHT_UPDATE',
@@ -120,6 +129,16 @@ async function main(): Promise<void> {
     });
   });
 
+  async function stopWorkers(): Promise<void> {
+    if (!workerSet) return;
+    try {
+      await workerSet.stopAll();
+    } catch (err) {
+      logger.warn({ component: 'bootstrap', err }, 'stopAll failed during pause');
+    }
+    workerSet = null;
+  }
+
   const app = await createHttpServer({
     config: configStore,
     db,
@@ -132,6 +151,8 @@ async function main(): Promise<void> {
     downloader,
     paths,
     onFirstRunComplete: ensureWorkersStarted,
+    onUserResume: ensureWorkersStarted,
+    onUserPause: stopWorkers,
     onRestart: () => {
       logger.info({ component: 'bootstrap' }, 'restart requested');
     },

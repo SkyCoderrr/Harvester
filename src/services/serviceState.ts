@@ -3,7 +3,11 @@ import type { Logger } from '../logger/index.js';
 import type { EventBus } from '../events/bus.js';
 import type { ServiceStatus, ServiceStateView } from '@shared/types.js';
 import type { HarvesterError } from '../errors/index.js';
-import { getServiceStateRow, upsertServiceStateRow } from '../db/queries.js';
+import {
+  getServiceStateRow,
+  upsertServiceStateRow,
+  setDesiredUserIntent as setDesiredUserIntentRow,
+} from '../db/queries.js';
 
 export type ServiceStateAction =
   | { type: 'START' }
@@ -24,6 +28,8 @@ export interface ServiceStateStore {
   get(): ServiceStateView;
   dispatch(action: ServiceStateAction): void;
   subscribe(fn: (s: ServiceStateView) => void): () => void;
+  /** FR-V2-37: write user intent to DB without going through reduce(). */
+  setDesiredUserIntent(intent: 'running' | 'paused'): void;
 }
 
 export function createServiceState(
@@ -32,8 +38,13 @@ export function createServiceState(
   logger: Logger,
 ): ServiceStateStore {
   const row = getServiceStateRow(db);
+  // FR-V2-03 / FR-V2-36: if the persisted intent says paused, surface that
+  // immediately in the in-memory state so /service/state shows the right
+  // thing even before the boot path has finished preflight.
+  const initialStatus: ServiceStatus =
+    row.desired_user_intent === 'paused' ? 'PAUSED_USER' : row.status;
   let state: ServiceStateView = {
-    status: row.status,
+    status: initialStatus,
     last_poll_at: row.last_poll_at,
     consecutive_errors: row.consecutive_errors,
     backoff_factor: 1,
@@ -41,6 +52,7 @@ export function createServiceState(
     preflight: { mteam: false, qbt: false, allowed_client: false, disk: false },
     emergency: null,
     lan: { enabled: false, listening_on: '127.0.0.1' },
+    desired_user_intent: row.desired_user_intent,
   };
   const subscribers = new Set<(s: ServiceStateView) => void>();
 
@@ -51,6 +63,7 @@ export function createServiceState(
       consecutive_errors: state.consecutive_errors,
       allowed_client_ok: state.allowed_client_ok ? 1 : 0,
       updated_at: Math.floor(Date.now() / 1000),
+      desired_user_intent: state.desired_user_intent,
     });
   }
 
@@ -100,9 +113,15 @@ export function createServiceState(
         };
       }
       case 'USER_PAUSE':
-        return { ...prev, status: 'PAUSED_USER' };
+        return { ...prev, status: 'PAUSED_USER', desired_user_intent: 'paused' };
       case 'USER_RESUME':
-        return { ...prev, status: 'RUNNING', consecutive_errors: 0, backoff_factor: 1 };
+        return {
+          ...prev,
+          status: 'RUNNING',
+          consecutive_errors: 0,
+          backoff_factor: 1,
+          desired_user_intent: 'running',
+        };
       case 'EMERGENCY_TRIGGER':
         return {
           ...prev,
@@ -134,6 +153,13 @@ export function createServiceState(
     subscribe(fn) {
       subscribers.add(fn);
       return () => subscribers.delete(fn);
+    },
+    setDesiredUserIntent(intent) {
+      // Single-purpose direct write so /service/restart and other paths can
+      // change intent without touching status/emergency/etc.
+      setDesiredUserIntentRow(db, intent);
+      state = { ...state, desired_user_intent: intent };
+      broadcast();
     },
   };
 }

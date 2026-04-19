@@ -3,6 +3,7 @@ import type { HttpDeps } from '../server.js';
 import { HarvesterError } from '../../errors/index.js';
 import { FACTORY_DEFAULT_RULE_SET } from '../../rules/defaults.js';
 import { insertRuleSetRow, listRuleSetRows } from '../../db/queries.js';
+import { firstRunSaveBody } from '../schemas/firstRun.js';
 
 export function registerFirstRunRoutes(app: FastifyInstance, deps: HttpDeps): void {
   app.post('/first-run/status', async () => {
@@ -18,12 +19,7 @@ export function registerFirstRunRoutes(app: FastifyInstance, deps: HttpDeps): vo
   });
 
   app.post('/first-run/save', async (req) => {
-    const body = req.body as {
-      mteam?: { api_key?: string; base_url?: string; user_agent?: string };
-      qbt?: { host?: string; port?: number; user?: string; password?: string };
-      downloads?: { default_save_path?: string };
-      seed_factory_defaults?: boolean;
-    };
+    const body = firstRunSaveBody.parse(req.body);
     const patch: Record<string, unknown> = {};
     if (body.mteam?.api_key) patch['mteam'] = { api_key: body.mteam.api_key };
     if (body.qbt) patch['qbt'] = body.qbt;

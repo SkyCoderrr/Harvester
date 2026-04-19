@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { api } from '../api/client';
-import { useAuthStore } from '../store/auth';
+import { openTicketedEventSource } from '../api/sse';
 import type { LogLevel, LogRow } from '@shared/types';
 
 const LEVELS: LogLevel[] = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
@@ -60,27 +60,36 @@ export default function LogsPage(): JSX.Element {
       setStreamOk(false);
       return;
     }
-    const token = useAuthStore.getState().token;
-    const url = token
-      ? `/api/logs/stream?token=${encodeURIComponent(token)}`
-      : `/api/logs/stream`;
-    const es = new EventSource(url);
-    es.addEventListener('log', (e) => {
-      try {
-        const row = JSON.parse((e as MessageEvent).data) as LogRow;
-        setRows((prev) => {
-          const next = prev.concat(row);
-          if (next.length > MAX_ROWS) next.splice(0, next.length - MAX_ROWS);
-          return next;
+    let es: EventSource | null = null;
+    let cancelled = false;
+    void openTicketedEventSource('/api/logs/stream', 'logs')
+      .then((source) => {
+        if (cancelled) {
+          source.close();
+          return;
+        }
+        es = source;
+        source.addEventListener('log', (e) => {
+          try {
+            const row = JSON.parse((e as MessageEvent).data) as LogRow;
+            setRows((prev) => {
+              const next = prev.concat(row);
+              if (next.length > MAX_ROWS) next.splice(0, next.length - MAX_ROWS);
+              return next;
+            });
+          } catch {
+            /* ignore bad frames */
+          }
         });
-      } catch {
-        /* ignore bad frames */
-      }
-    });
-    es.onopen = () => setStreamOk(true);
-    es.onerror = () => setStreamOk(false);
+        source.onopen = (): void => setStreamOk(true);
+        source.onerror = (): void => setStreamOk(false);
+      })
+      .catch(() => {
+        setStreamOk(false);
+      });
     return () => {
-      es.close();
+      cancelled = true;
+      es?.close();
     };
   }, [tailing]);
 

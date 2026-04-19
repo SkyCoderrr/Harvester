@@ -28,6 +28,7 @@ export type ErrorCode =
   | 'GRAB_DISCOUNT_FLIPPED'
   | 'NOT_FOUND'
   | 'FIRST_RUN_INCOMPLETE'
+  | 'VALIDATION_FAILED'
   | 'INTERNAL';
 
 export class HarvesterError extends Error {
@@ -79,6 +80,7 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   GRAB_DISCOUNT_FLIPPED: 409,
   NOT_FOUND: 404,
   FIRST_RUN_INCOMPLETE: 412,
+  VALIDATION_FAILED: 400,
   INTERNAL: 500,
 };
 
@@ -111,6 +113,7 @@ export const USER_MESSAGES: Record<ErrorCode, string> = {
   GRAB_DISCOUNT_FLIPPED: 'Torrent discount flipped to paid before the grab completed; skipped.',
   NOT_FOUND: 'Not found.',
   FIRST_RUN_INCOMPLETE: 'First-run setup must be completed before this action.',
+  VALIDATION_FAILED: 'Request body failed validation.',
   INTERNAL: 'Unexpected error; see logs.',
 };
 

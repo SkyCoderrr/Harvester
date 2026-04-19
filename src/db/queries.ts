@@ -108,6 +108,8 @@ export interface ServiceStateRow {
   consecutive_errors: number;
   allowed_client_ok: number;
   updated_at: number;
+  /** FR-V2-03: persisted user intent. Survives restart. */
+  desired_user_intent: 'running' | 'paused';
 }
 
 export interface LogFilter {
@@ -469,19 +471,31 @@ export function getServiceStateRow(db: Db): ServiceStateRow {
 
 export function upsertServiceStateRow(db: Db, row: Omit<ServiceStateRow, 'id'>): void {
   db.prepare(
-    `INSERT INTO service_state (id, status, last_poll_at, consecutive_errors, allowed_client_ok, updated_at)
-     VALUES (1, ?, ?, ?, ?, ?)
+    `INSERT INTO service_state (id, status, last_poll_at, consecutive_errors, allowed_client_ok, updated_at, desired_user_intent)
+     VALUES (1, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        status=excluded.status,
        last_poll_at=excluded.last_poll_at,
        consecutive_errors=excluded.consecutive_errors,
        allowed_client_ok=excluded.allowed_client_ok,
-       updated_at=excluded.updated_at`,
+       updated_at=excluded.updated_at,
+       desired_user_intent=excluded.desired_user_intent`,
   ).run(
     row.status,
     row.last_poll_at,
     row.consecutive_errors,
     row.allowed_client_ok,
     row.updated_at,
+    row.desired_user_intent,
   );
+}
+
+/**
+ * FR-V2-37 helper: write only the user intent without disturbing the rest of
+ * the row. Used by /service/pause and /service/resume.
+ */
+export function setDesiredUserIntent(db: Db, intent: 'running' | 'paused'): void {
+  db.prepare(
+    `UPDATE service_state SET desired_user_intent = ?, updated_at = ? WHERE id = 1`,
+  ).run(intent, Math.floor(Date.now() / 1000));
 }

@@ -4,6 +4,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import sensible from '@fastify/sensible';
 import cors from '@fastify/cors';
 import staticPlugin from '@fastify/static';
+import { ZodError } from 'zod';
 import type { Logger } from '../logger/index.js';
 import type { Db } from '../db/index.js';
 import type { EventBus } from '../events/bus.js';
@@ -26,6 +27,7 @@ import { registerServiceRoutes } from './routes/service.js';
 import { registerFirstRunRoutes } from './routes/firstRun.js';
 import { registerMetricsRoute } from './routes/metrics.js';
 import { registerStatsRoutes } from './routes/stats.js';
+import { registerSseTicketRoute, createSseTicketStore } from './routes/sseTicket.js';
 import { createAuthMiddleware } from '../auth/middleware.js';
 
 export interface HttpDeps {
@@ -45,13 +47,20 @@ export interface HttpDeps {
   onPasswordChange?: () => void;
   /** Triggers a process exit so the supervisor relaunches with new bind settings. */
   onRestart?: () => void;
+  /** FR-V2-37: bring workers online when the user resumes a previously-paused service. */
+  onUserResume?: () => Promise<void>;
+  /** FR-V2-37: gracefully stop workers when the user pauses. */
+  onUserPause?: () => Promise<void>;
 }
 
 export async function createHttpServer(deps: HttpDeps): Promise<FastifyInstance> {
+  // FR-V2-06: explicit body cap (256 KiB). Rules routes opt up to 1 MiB
+  // per-route since rule-set JSON can be larger.
   const app = Fastify({
     logger: false,
     trustProxy: false,
     disableRequestLogging: true,
+    bodyLimit: 256 * 1024,
     genReqId: () => crypto.randomUUID(),
   });
 
@@ -86,7 +95,8 @@ export async function createHttpServer(deps: HttpDeps): Promise<FastifyInstance>
         component: 'http',
         req_id: req.id,
         method: req.method,
-        url: req.url,
+        // FR-V2-08: never let SSE tickets reach access logs.
+        url: scrubUrl(req.url),
         status: reply.statusCode,
         duration_ms: reply.elapsedTime,
       },
@@ -95,7 +105,19 @@ export async function createHttpServer(deps: HttpDeps): Promise<FastifyInstance>
   });
 
   app.setErrorHandler((err, req, reply) => {
-    const herr = err instanceof HarvesterError ? err : normalizeError(err);
+    // FR-V2-01: zod failures from `schema.parse(req.body)` become 400 VALIDATION_FAILED.
+    let herr: HarvesterError;
+    if (err instanceof HarvesterError) {
+      herr = err;
+    } else if (err instanceof ZodError) {
+      herr = new HarvesterError({
+        code: 'VALIDATION_FAILED',
+        user_message: 'Request body failed validation.',
+        context: { issues: err.issues },
+      });
+    } else {
+      herr = normalizeError(err);
+    }
     const status = ERROR_HTTP_STATUS[herr.code] ?? 500;
     deps.logger.warn(
       { component: 'http', req_id: req.id, url: req.url, err: herr },
@@ -134,6 +156,10 @@ export async function createHttpServer(deps: HttpDeps): Promise<FastifyInstance>
     await app.register(staticPlugin, { root: webDist, prefix: '/' });
   }
 
+  // FR-V2-08: SSE ticket store. Lives for the life of the http server.
+  const sseTickets = createSseTicketStore();
+  (app as unknown as { sseTickets: typeof sseTickets }).sseTickets = sseTickets;
+
   // Register API routes
   await app.register(
     async (scope) => {
@@ -143,15 +169,24 @@ export async function createHttpServer(deps: HttpDeps): Promise<FastifyInstance>
       registerRulesRoutes(scope, deps);
       registerLogsRoutes(scope, deps);
       registerSettingsRoutes(scope, deps);
-      registerServiceRoutes(scope, deps);
+      registerServiceRoutes(scope, deps, sseTickets);
       registerFirstRunRoutes(scope, deps);
       registerMetricsRoute(scope, deps);
       registerStatsRoutes(scope, deps);
+      registerSseTicketRoute(scope, deps, sseTickets);
     },
     { prefix: '/api' },
   );
 
   return app;
+}
+
+/**
+ * Replace any `ticket=…` and `token=…` query values with REDACTED. Used
+ * before any URL is written to the access log. FR-V2-08.
+ */
+export function scrubUrl(url: string): string {
+  return url.replace(/([?&])(ticket|token)=[^&]*/g, '$1$2=REDACTED');
 }
 
 function resolveWebDist(paths: AppPaths): string | null {

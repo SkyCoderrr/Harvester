@@ -32,8 +32,13 @@ export interface AuthInstance {
   bumpEpoch(): void;
 }
 
-const SSE_PATH_RE = /^\/api\/(?:service\/events|logs\/stream)/;
-const BYPASS_PATH_RE = /^\/api\/(?:health|first-run(?:\/|$))/;
+// FR-V2-07: SSE endpoints no longer accept ?token=<bearer>. They use a
+// short-lived one-shot ticket minted by the authenticated POST /api/sse-ticket
+// route and validated by the SSE handler itself. Because the SSE handler does
+// its own auth (ticket consume) we bypass the bearer check on those paths;
+// /api/sse-ticket itself stays under bearer auth.
+const BYPASS_PATH_RE =
+  /^\/api\/(?:health|first-run(?:\/|$)|service\/events|logs\/stream)/;
 
 export function createAuthMiddleware(deps: AuthDeps): AuthInstance {
   const { config, logger, bus } = deps;
@@ -137,17 +142,14 @@ export function createAuthMiddleware(deps: AuthDeps): AuthInstance {
   };
 }
 
-function extractToken(req: FastifyRequest, path: string): string | null {
+function extractToken(req: FastifyRequest, _path: string): string | null {
   const auth = req.headers['authorization'];
   if (typeof auth === 'string' && auth.startsWith('Bearer ')) {
     const t = auth.slice(7).trim();
     if (t) return t;
   }
-  // SSE-only: accept ?token=
-  if (SSE_PATH_RE.test(path)) {
-    const q = req.query as { token?: string } | undefined;
-    if (q?.token) return q.token;
-  }
+  // FR-V2-07: ?token= in query strings is no longer accepted on any path,
+  // SSE included. SSE clients must mint a ticket via POST /api/sse-ticket.
   return null;
 }
 

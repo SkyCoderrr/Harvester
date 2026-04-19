@@ -22,10 +22,25 @@ export function runMigrations(
     logger.warn({ dir: paths.migrationsDir }, 'migrations dir missing');
     return;
   }
+  // FR-V2-05: filenames may carry an alphabetic suffix on the numeric prefix
+  // (e.g. 0003a_indexes.sql, 0003b_…) so two migrations can share a version
+  // bucket while keeping a stable lex order. The gap check uses the bucket.
   const files = fs
     .readdirSync(paths.migrationsDir)
-    .filter((f) => /^\d{4}_.+\.sql$/.test(f))
+    .filter((f) => /^\d{4}[a-z]?_.+\.sql$/.test(f))
     .sort();
+  // FR-V2-05: refuse to start if the on-disk version sequence is non-contiguous
+  // (1, 2, 3, …). Any out-of-order or missing version aborts before any apply.
+  const onDiskVersions = Array.from(
+    new Set(files.map((f) => parseInt(f.slice(0, 4), 10))),
+  ).sort((a, b) => a - b);
+  for (let i = 0; i < onDiskVersions.length; i++) {
+    if (onDiskVersions[i] !== i + 1) {
+      throw new Error(
+        `Migration sequence has gaps or is out of order: files=[${onDiskVersions.join(',')}]`,
+      );
+    }
+  }
   for (const file of files) {
     const version = parseInt(file.slice(0, 4), 10);
     if (applied.has(version)) continue;

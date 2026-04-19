@@ -16,6 +16,7 @@ import { normalizeMTeamTorrent } from '../../util/normalize.js';
 import { freeGib } from '../../util/disk.js';
 import { HarvesterError } from '../../errors/index.js';
 import type { MTeamTorrent } from '@shared/types.js';
+import { ruleSetInputBody, ruleDryRunBody } from '../schemas/rules.js';
 
 export function registerRulesRoutes(app: FastifyInstance, deps: HttpDeps): void {
   app.get('/rules', async () => {
@@ -30,8 +31,8 @@ export function registerRulesRoutes(app: FastifyInstance, deps: HttpDeps): void 
     return { ok: true, data: rowToRuleSet(row) };
   });
 
-  app.post('/rules', async (req) => {
-    const input = req.body as unknown;
+  app.post('/rules', { bodyLimit: 1024 * 1024 }, async (req) => {
+    const input = ruleSetInputBody.parse(req.body);
     const v = validateRuleSetInput(input);
     if (!v.ok || !v.value) {
       throw new HarvesterError({
@@ -60,11 +61,12 @@ export function registerRulesRoutes(app: FastifyInstance, deps: HttpDeps): void 
     }
   });
 
-  app.put('/rules/:id', async (req) => {
+  app.put('/rules/:id', { bodyLimit: 1024 * 1024 }, async (req) => {
     const { id } = req.params as { id: string };
     const row = getRuleSetRow(deps.db, Number(id));
     if (!row) throw new HarvesterError({ code: 'NOT_FOUND', user_message: 'Rule-set not found' });
-    const v = validateRuleSetInput(req.body);
+    const input = ruleSetInputBody.parse(req.body);
+    const v = validateRuleSetInput(input);
     if (!v.ok || !v.value) {
       throw new HarvesterError({
         code: 'RULE_VALIDATION',
@@ -94,8 +96,9 @@ export function registerRulesRoutes(app: FastifyInstance, deps: HttpDeps): void 
     return { ok: true, data: { ok: true } };
   });
 
-  app.post('/rules/validate', async (req) => {
-    const v = validateRuleSetInput(req.body);
+  app.post('/rules/validate', { bodyLimit: 1024 * 1024 }, async (req) => {
+    const input = ruleSetInputBody.parse(req.body);
+    const v = validateRuleSetInput(input);
     return { ok: true, data: { ok: v.ok, errors: v.errors ?? [] } };
   });
 
@@ -104,7 +107,7 @@ export function registerRulesRoutes(app: FastifyInstance, deps: HttpDeps): void 
     const row = getRuleSetRow(deps.db, Number(id));
     if (!row) throw new HarvesterError({ code: 'NOT_FOUND', user_message: 'Rule-set not found' });
     const rs = rowToRuleSet(row);
-    const body = (req.body ?? {}) as { simulate_at?: number; sample_size?: number };
+    const body = ruleDryRunBody.parse(req.body) ?? {};
     const sample = Math.min(500, Math.max(1, body.sample_size ?? 200));
     const events = listRecentTorrentEvents(deps.db, sample);
     const cfg = deps.config.get();

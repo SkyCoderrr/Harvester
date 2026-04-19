@@ -269,6 +269,12 @@ export interface ServiceStateView {
     tier_min: number | null;
   } | null;
   lan: { enabled: boolean; listening_on: string };
+  /**
+   * FR-V2-03 / FR-V2-36: persisted user intent. Boot logic honors
+   * `desired_user_intent === 'paused'` and skips worker startup.
+   * Distinct from `status` so emergency/backoff transitions don't clobber it.
+   */
+  desired_user_intent: 'running' | 'paused';
 }
 
 // -- M-Team raw types (reflects real wire contract from spike) --------------

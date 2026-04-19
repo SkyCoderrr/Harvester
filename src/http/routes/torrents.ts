@@ -4,6 +4,7 @@ import type { TorrentRow } from '@shared/types.js';
 import { listTorrentEventsForMteamId, getTorrentEventByMteamId } from '../../db/queries.js';
 import type { QbtTorrentInfo } from '../../qbt/client.js';
 import { HarvesterError } from '../../errors/index.js';
+import { torrentsBulkActionBody, torrentsActionBody } from '../schemas/torrents.js';
 
 export function registerTorrentsRoutes(app: FastifyInstance, deps: HttpDeps): void {
   app.get('/torrents', async (req) => {
@@ -77,11 +78,7 @@ export function registerTorrentsRoutes(app: FastifyInstance, deps: HttpDeps): vo
   });
 
   app.post('/torrents/bulk-action', async (req) => {
-    const body = req.body as {
-      infohashes?: string[];
-      ids?: string[];
-      action: 'pause' | 'resume' | 'recheck' | 'remove' | 'remove_with_data';
-    };
+    const body = torrentsBulkActionBody.parse(req.body);
     // Accept either infohashes directly (from the qBt listing) or mteam_ids which we
     // resolve via torrent_events. infohashes takes precedence.
     let hashes: string[] = [];
@@ -125,9 +122,7 @@ export function registerTorrentsRoutes(app: FastifyInstance, deps: HttpDeps): vo
 
   app.post('/torrents/:id/action', async (req) => {
     const { id } = req.params as { id: string };
-    const { action } = req.body as {
-      action: 'pause' | 'resume' | 'recheck' | 'remove' | 'remove_with_data';
-    };
+    const { action } = torrentsActionBody.parse(req.body);
     const event = getTorrentEventByMteamId(deps.db, id);
     if (!event?.infohash) {
       throw new HarvesterError({

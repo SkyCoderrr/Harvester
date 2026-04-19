@@ -4,6 +4,12 @@ import type { Settings } from '@shared/types.js';
 import { HarvesterError } from '../../errors/index.js';
 import { hashPassword } from '../../auth/argon2.js';
 import { validatePasswordPolicy } from '../../auth/passwordPolicy.js';
+import {
+  settingsPatchBody,
+  settingsTestMteamBody,
+  settingsLanAccessBody,
+  settingsTestQbtBody,
+} from '../schemas/settings.js';
 
 function maskApiKey(key: string): string {
   if (!key || key.startsWith('__FIRST_RUN')) return '';
@@ -49,22 +55,9 @@ export function registerSettingsRoutes(app: FastifyInstance, deps: HttpDeps): vo
   app.get('/settings', async () => ({ ok: true, data: toSettings(deps) }));
 
   app.put('/settings', async (req) => {
-    const patch = req.body as Record<string, unknown>;
-    // Only allow a safe subset of fields in Phase 1. More fields arrive in Phase 2/3.
-    const next: Record<string, unknown> = {};
-    if (patch.poller && typeof patch.poller === 'object') next['poller'] = patch.poller;
-    if (patch.lifecycle && typeof patch.lifecycle === 'object') next['lifecycle'] = patch.lifecycle;
-    if (patch.downloads && typeof patch.downloads === 'object') next['downloads'] = patch.downloads;
-    if (patch.ui && typeof patch.ui === 'object') next['ui'] = patch.ui;
-    if (patch.mteam && typeof patch.mteam === 'object') next['mteam'] = patch.mteam;
-    if (patch.qbt && typeof patch.qbt === 'object') next['qbt'] = patch.qbt;
-    if (patch.emergency && typeof patch.emergency === 'object') next['emergency'] = patch.emergency;
-    try {
-      deps.config.update(next as never);
-    } catch (err) {
-      if (err instanceof HarvesterError) throw err;
-      throw err;
-    }
+    const patch = settingsPatchBody.parse(req.body);
+    // The schema already restricts the surface; pass through unchanged.
+    deps.config.update(patch as never);
     return {
       ok: true,
       data: {
@@ -75,7 +68,7 @@ export function registerSettingsRoutes(app: FastifyInstance, deps: HttpDeps): vo
   });
 
   app.post('/settings/test/mteam', async (req) => {
-    const { api_key } = (req.body as { api_key?: string } | undefined) ?? {};
+    const { api_key } = settingsTestMteamBody.parse(req.body ?? {});
     const keyToUse = api_key ?? deps.config.get().mteam.api_key;
     if (!keyToUse || keyToUse.startsWith('__FIRST_RUN')) {
       throw new HarvesterError({
@@ -101,11 +94,7 @@ export function registerSettingsRoutes(app: FastifyInstance, deps: HttpDeps): vo
   });
 
   app.post('/settings/lan-access', async (req) => {
-    const body = (req.body ?? {}) as {
-      enabled: boolean;
-      password?: string;
-      bind_host?: string;
-    };
+    const body = settingsLanAccessBody.parse(req.body);
     const cfg = deps.config.get();
     if (body.enabled) {
       if (!body.password) {
@@ -171,12 +160,7 @@ export function registerSettingsRoutes(app: FastifyInstance, deps: HttpDeps): vo
   });
 
   app.post('/settings/test/qbt', async (req) => {
-    const body = (req.body ?? {}) as {
-      host?: string;
-      port?: number;
-      user?: string;
-      pass?: string;
-    };
+    const body = settingsTestQbtBody.parse(req.body ?? {});
     const c = deps.config.get();
     const host = body.host ?? c.qbt.host;
     const port = body.port ?? c.qbt.port;
