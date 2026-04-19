@@ -1,0 +1,26 @@
+{
+  "status": 200,
+  "elapsed_ms": 84,
+  "headers": {
+    "alt-svc": "h3=\":443\"; ma=86400",
+    "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+    "cf-cache-status": "DYNAMIC",
+    "cf-ray": "9ee82616aa0444b0-YYZ",
+    "connection": "keep-alive",
+    "content-encoding": "br",
+    "content-type": "application/json;charset=UTF-8",
+    "date": "Sun, 19 Apr 2026 01:31:16 GMT",
+    "expires": "0",
+    "pragma": "no-cache",
+    "server": "cloudflare",
+    "strict-transport-security": "max-age=15552000; includeSubDomains; preload",
+    "transfer-encoding": "chunked",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-xss-protection": "0"
+  },
+  "body": {
+    "code": 1,
+    "message": "No static resource system/online."
+  }
+}

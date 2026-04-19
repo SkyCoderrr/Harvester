@@ -1,0 +1,59 @@
+{
+  "name": "harvester",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "dev": "node --enable-source-maps --import tsx/esm src/index.ts",
+    "dev:watch": "node --watch --enable-source-maps --import tsx/esm src/index.ts",
+    "dev:web": "cd web && npm run dev",
+    "build": "npm run gen:rules-schema && npm run build:server && npm run build:web",
+    "build:server": "tsc -p tsconfig.build.json",
+    "build:web": "cd web && npm run build",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"shared/**/*.ts\"",
+    "typecheck": "tsc --noEmit && cd web && tsc --noEmit",
+    "gen:rules-schema": "tsx scripts/gen-rules-schema.ts",
+    "seed:dev": "tsx scripts/seed-dev-db.ts",
+    "audit": "npm audit --audit-level=high"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.0",
+    "@fastify/rate-limit": "^9.0.0",
+    "@fastify/sensible": "^5.5.0",
+    "@fastify/static": "^7.0.0",
+    "ajv": "^8.17.0",
+    "ajv-formats": "^3.0.0",
+    "argon2": "^0.41.0",
+    "better-sqlite3": "^11.3.0",
+    "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.1.0",
+    "fastify": "^4.28.0",
+    "pino": "^9.3.0",
+    "pino-pretty": "^11.2.0",
+    "pino-roll": "^2.0.0",
+    "zod": "^3.23.0",
+    "zod-to-json-schema": "^3.23.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^20.12.0",
+    "@typescript-eslint/eslint-plugin": "^7.8.0",
+    "@typescript-eslint/parser": "^7.8.0",
+    "@vitest/coverage-v8": "^1.6.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-boundaries": "^5.0.0",
+    "msw": "^2.3.0",
+    "prettier": "^3.3.0",
+    "tsx": "^4.11.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}

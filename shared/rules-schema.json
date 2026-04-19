@@ -1,0 +1,371 @@
+{
+  "$ref": "#/definitions/RuleSetInput",
+  "definitions": {
+    "RuleSetInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9 _-]+$"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "rules": {
+          "type": "object",
+          "properties": {
+            "schema_version": {
+              "type": "number",
+              "const": 1
+            },
+            "discount_whitelist": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "NORMAL",
+                  "PERCENT_70",
+                  "PERCENT_50",
+                  "FREE",
+                  "_2X_FREE",
+                  "_2X",
+                  "_2X_PERCENT_50"
+                ]
+              },
+              "minItems": 1
+            },
+            "min_free_hours_remaining": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 168
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "size_gib_min": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100000
+            },
+            "size_gib_max": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100000
+            },
+            "category_whitelist": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "min_seeders": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "max_seeders": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "min_leechers": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "max_leechers": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "leecher_seeder_ratio_min": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title_regex_include": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title_regex_exclude": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "free_disk_gib_min": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1000000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "first_seeder_fast_path": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "max_age_minutes": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 1440
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "max_age_minutes"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "qbt_category": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9 _-]+$"
+            },
+            "qbt_tags_extra": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "maxItems": 16
+            },
+            "qbt_save_path": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "qbt_upload_limit_kbps": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "schedule": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "timezone": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "windows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "days": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "mon",
+                                "tue",
+                                "wed",
+                                "thu",
+                                "fri",
+                                "sat",
+                                "sun"
+                              ]
+                            },
+                            "minItems": 1
+                          },
+                          "start": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                          },
+                          "end": {
+                            "$ref": "#/definitions/RuleSetInput/properties/rules/properties/schedule/anyOf/0/properties/windows/items/properties/start"
+                          }
+                        },
+                        "required": [
+                          "days",
+                          "start",
+                          "end"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": [
+                    "timezone",
+                    "windows"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "lifecycle_overrides": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "seed_time_hours": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.1,
+                          "maximum": 720
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "zero_peers_minutes": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 1,
+                          "maximum": 1440
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "remove_with_data": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "seed_time_hours",
+                    "zero_peers_minutes",
+                    "remove_with_data"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "schema_version",
+            "discount_whitelist",
+            "min_free_hours_remaining",
+            "size_gib_min",
+            "size_gib_max",
+            "category_whitelist",
+            "min_seeders",
+            "max_seeders",
+            "min_leechers",
+            "leecher_seeder_ratio_min",
+            "title_regex_include",
+            "title_regex_exclude",
+            "free_disk_gib_min",
+            "first_seeder_fast_path",
+            "qbt_category",
+            "qbt_tags_extra",
+            "qbt_save_path",
+            "qbt_upload_limit_kbps",
+            "schedule",
+            "lifecycle_overrides"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "name",
+        "enabled",
+        "rules"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

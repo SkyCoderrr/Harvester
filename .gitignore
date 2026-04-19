@@ -1,0 +1,34 @@
+node_modules/
+dist/
+web/dist/
+coverage/
+*.log
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Runtime
+.harvester/
+*.db
+*.db-wal
+*.db-shm
+logs/
+/tmp/
+
+# Playwright
+test-results/
+playwright-report/
+
+# Spike — keep scripts + captures but ignore secrets file
+spike/.env
+spike/.env.local
+
+# Env
+.env
+.env.local

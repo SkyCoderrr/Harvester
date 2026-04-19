@@ -1,0 +1,46 @@
+/** Tiny retry helper with exponential backoff. No external deps. */
+
+export interface RetryOptions {
+  attempts: number;
+  baseMs: number;
+  factor?: number;
+  maxMs?: number;
+  /** Return true to retry, false to surface the error immediately. */
+  shouldRetry?: (err: unknown, attempt: number) => boolean;
+  onAttempt?: (attempt: number, err: unknown) => void;
+  signal?: AbortSignal;
+}
+
+export async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions): Promise<T> {
+  const factor = opts.factor ?? 2;
+  const maxMs = opts.maxMs ?? 30_000;
+  let lastErr: unknown;
+  for (let i = 1; i <= opts.attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (opts.onAttempt) opts.onAttempt(i, err);
+      if (opts.shouldRetry && !opts.shouldRetry(err, i)) throw err;
+      if (i >= opts.attempts) throw err;
+      const delay = Math.min(opts.baseMs * factor ** (i - 1), maxMs);
+      await sleep(delay, opts.signal);
+    }
+  }
+  throw lastErr;
+}
+
+export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(new Error('aborted'));
+    const to = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(to);
+      reject(new Error('aborted'));
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
