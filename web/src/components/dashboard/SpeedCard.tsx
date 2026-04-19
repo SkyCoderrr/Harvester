@@ -32,11 +32,13 @@ const VIEW_OPTS = [
 ];
 
 export function SpeedCard(): JSX.Element {
+  // Backend transferProbe writes every 10s; poll at the same cadence so
+  // the "live" dl/up numbers at the top of the card actually feel live.
   const q = useQuery({
     queryKey: ['stats', 'transfer-snapshots', 60],
     queryFn: () => api.get<{ items: TransferSnap[] }>('/api/stats/transfer-snapshots?minutes=60'),
-    refetchInterval: 60_000,
-    staleTime: 55_000,
+    refetchInterval: 10_000,
+    staleTime: 9_000,
     structuralSharing: true,
   });
   const [scale, setScale] = useState<'linear' | 'log'>('linear');

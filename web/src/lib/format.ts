@@ -7,6 +7,20 @@ export function formatBytes(bytes: number): string {
   return Math.round(bytes) + ' B';
 }
 
+/**
+ * Decimal byte formatter (SI / network convention). 1 GB = 1,000,000,000 B.
+ * Used by the dashboard Volume + Disk tiles since users think in network-GB
+ * not storage-GiB. Torrent-size display stays on the binary `formatBytes`.
+ */
+export function formatBytesDecimal(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  if (bytes >= 1e12) return (bytes / 1e12).toFixed(2) + ' TB';
+  if (bytes >= 1e9) return (bytes / 1e9).toFixed(2) + ' GB';
+  if (bytes >= 1e6) return (bytes / 1e6).toFixed(1) + ' MB';
+  if (bytes >= 1e3) return (bytes / 1e3).toFixed(0) + ' kB';
+  return Math.round(bytes) + ' B';
+}
+
 export function formatRate(bytesPerSec: number): string {
   return formatBytes(bytesPerSec) + '/s';
 }

@@ -1,19 +1,15 @@
-import {
-  Activity,
-  ArrowDown,
-  ArrowUp,
-  Award,
-  Clock,
-  TrendingUp,
-} from 'lucide-react';
+import { Activity, Award, Clock, TrendingUp } from 'lucide-react';
 import type { DashboardSummary } from '@shared/types';
 import { KpiTile } from './KpiTile';
 import { DiskTile } from './DiskTile';
 import { TorrentsTile } from './TorrentsTile';
-import { formatBytes, formatDurationShort } from '../../lib/format';
+import { VolumeTile } from './VolumeTile';
+import { formatDurationShort } from '../../lib/format';
 
-// KPI strip: 7 cells wide at 2xl (one is the 2-col TorrentsTile → 8 grid
-// slots). Wraps responsively down to 2 columns.
+// KPI strip layout:
+//   Ratio | SeedTime | Bonus | Grabs | Volume(2) | Torrents(2) | Disk
+// Total = 8 slots at the widest breakpoint. Volume and Disk sit next to each
+// other so the lifetime-volume + disk-state reads as one coherent block.
 
 export function KpiStrip({ data }: { data: DashboardSummary | undefined }): JSX.Element {
   return (
@@ -51,29 +47,7 @@ export function KpiStrip({ data }: { data: DashboardSummary | undefined }): JSX.
         deltaFormatter={(d) => String(Math.round(d))}
         deltaSuffix="vs prev"
       />
-      <KpiTile
-        label="Uploaded"
-        icon={ArrowUp}
-        tone="text-accent-success"
-        value={
-          data?.uploaded_bytes_total != null ? formatBytes(data.uploaded_bytes_total) : '—'
-        }
-        delta={data?.uploaded_bytes_delta_24h ?? null}
-        deltaFormatter={(d) => formatBytes(Math.abs(d))}
-        deltaSuffix="· 24h"
-      />
-      <KpiTile
-        label="Downloaded"
-        icon={ArrowDown}
-        tone="text-accent"
-        value={
-          data?.downloaded_bytes_total != null ? formatBytes(data.downloaded_bytes_total) : '—'
-        }
-        delta={data?.downloaded_bytes_delta_24h ?? null}
-        deltaFormatter={(d) => formatBytes(Math.abs(d))}
-        deltaSuffix="· 24h"
-        deltaInvert
-      />
+      <VolumeTile data={data} />
       <TorrentsTile data={data} />
       <DiskTile data={data} />
     </div>

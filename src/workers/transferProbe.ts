@@ -30,7 +30,10 @@ export function createTransferProbeWorker(deps: {
 
   return createLoopWorker({
     name: 'transferProbe',
-    intervalMs: () => 60_000,
+    // Users want responsive live-speed numbers on the dashboard. qBt's
+    // /api/v2/transfer/info is a cheap call; sampling every 10s costs a few
+    // extra KB/day in the transfer_snapshots table.
+    intervalMs: () => 10_000,
     tick,
     logger,
   });

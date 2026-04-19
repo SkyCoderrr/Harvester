@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, BellOff, Check, Loader2, Lock, RotateCw } from 'lucide-react';
+import { Bell, BellOff, Check, KeyRound, Loader2, Lock, Pencil, RotateCw, X } from 'lucide-react';
 import { api, HarvesterClientError } from '../api/client';
 import type { Settings as SettingsT } from '@shared/types';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
@@ -29,17 +29,9 @@ export default function SettingsPage(): JSX.Element {
 
   return (
     <div className="p-6 space-y-4 max-w-3xl">
-      <Section title="M-Team">
-        <Row label="API key" value={s.mteam.api_key_masked || '(not set)'} />
-        <Row label="Auth OK" value={s.mteam.api_key_set ? 'yes' : 'no'} />
-      </Section>
+      <MteamSection settings={s} onSaved={() => qc.invalidateQueries({ queryKey: ['settings'] })} />
 
-      <Section title="qBittorrent">
-        <Row label="Host" value={`${s.qbt.host}:${s.qbt.port}`} />
-        <Row label="User" value={s.qbt.user || '(not set)'} />
-        <Row label="Password set" value={s.qbt.password_set ? 'yes' : 'no'} />
-        <Row label="Allowed client" value={s.qbt.allowed_client_ok ? 'yes' : 'no'} />
-      </Section>
+      <QbtSection settings={s} onSaved={() => qc.invalidateQueries({ queryKey: ['settings'] })} />
 
       <Section title="Poller">
         <label className="block">
@@ -331,5 +323,285 @@ function Row({ label, value }: { label: string; value: string | number }): JSX.E
       <span className="text-text-muted">{label}</span>
       <span className="font-mono text-xs">{value}</span>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// M-Team credential change. Test via POST /api/settings/test/mteam before
+// committing via PUT /api/settings.
+// ---------------------------------------------------------------------------
+function MteamSection({
+  settings,
+  onSaved,
+}: {
+  settings: SettingsT;
+  onSaved: () => void | Promise<unknown>;
+}): JSX.Element {
+  const [editing, setEditing] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function testAndSave(): Promise<void> {
+    if (!apiKey) return;
+    setBusy(true);
+    setError(null);
+    setStatus('Testing key against M-Team…');
+    try {
+      const test = await api.post<{ ok: boolean; error?: { user_message: string } }>(
+        '/api/settings/test/mteam',
+        { api_key: apiKey },
+      );
+      if (!test.ok) {
+        setError(test.error?.user_message ?? 'M-Team rejected the key.');
+        setStatus(null);
+        return;
+      }
+      setStatus('Key OK — saving…');
+      await api.put('/api/settings', { mteam: { api_key: apiKey } });
+      setStatus('Saved.');
+      setApiKey('');
+      setEditing(false);
+      await onSaved();
+      toast.info('M-Team key updated', 'The new key is live.', 'config');
+    } catch (err) {
+      setError(err instanceof HarvesterClientError ? err.user_message : String(err));
+      setStatus(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Section title="M-Team">
+      <Row label="API key" value={settings.mteam.api_key_masked || '(not set)'} />
+      <Row label="Auth OK" value={settings.mteam.api_key_set ? 'yes' : 'no'} />
+      {!editing ? (
+        <button
+          type="button"
+          onClick={() => {
+            setEditing(true);
+            setError(null);
+            setStatus(null);
+          }}
+          className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-bg-elev border border-zinc-800 rounded text-sm hover:bg-zinc-800 cursor-pointer"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+          {settings.mteam.api_key_set ? 'Change API key' : 'Set API key'}
+        </button>
+      ) : (
+        <div className="mt-3 space-y-2">
+          <label className="block">
+            <span className="block text-xs text-text-muted mb-1">New M-Team API key</span>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value.trim())}
+              placeholder="paste key"
+              autoFocus
+              className="w-full max-w-md px-3 py-2 bg-bg-elev border border-zinc-800 rounded text-sm font-mono focus:border-accent outline-none"
+            />
+          </label>
+          {status && <div className="text-xs text-text-muted">{status}</div>}
+          {error && <div className="text-xs text-accent-danger">{error}</div>}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                void testAndSave();
+              }}
+              disabled={!apiKey || busy}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent rounded text-sm font-medium disabled:opacity-50 cursor-pointer"
+            >
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />}
+              Test &amp; save
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(false);
+                setApiKey('');
+                setError(null);
+                setStatus(null);
+              }}
+              disabled={busy}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-bg-elev border border-zinc-800 rounded text-sm hover:bg-zinc-800 cursor-pointer disabled:opacity-50"
+            >
+              <X className="h-3.5 w-3.5" /> Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </Section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// qBittorrent credential / host change. Test via POST /api/settings/test/qbt
+// before committing via PUT /api/settings.
+// ---------------------------------------------------------------------------
+function QbtSection({
+  settings,
+  onSaved,
+}: {
+  settings: SettingsT;
+  onSaved: () => void | Promise<unknown>;
+}): JSX.Element {
+  const [editing, setEditing] = useState(false);
+  const [host, setHost] = useState(settings.qbt.host);
+  const [port, setPort] = useState(settings.qbt.port);
+  const [user, setUser] = useState(settings.qbt.user);
+  const [pass, setPass] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function testAndSave(): Promise<void> {
+    setBusy(true);
+    setError(null);
+    setStatus('Testing qBittorrent login…');
+    try {
+      const body: Record<string, unknown> = { host, port, user };
+      if (pass) body['pass'] = pass;
+      const test = await api.post<{ ok: boolean; error?: string; version?: string }>(
+        '/api/settings/test/qbt',
+        body,
+      );
+      if (!test.ok) {
+        setError(test.error ?? 'qBittorrent rejected the login.');
+        setStatus(null);
+        return;
+      }
+      setStatus(`Login OK (qBt ${test.version ?? '?'}) — saving…`);
+      const patch: Record<string, unknown> = {
+        qbt: {
+          host,
+          port,
+          user,
+          ...(pass ? { password: pass } : {}),
+        },
+      };
+      await api.put('/api/settings', patch);
+      setStatus('Saved.');
+      setPass('');
+      setEditing(false);
+      await onSaved();
+      toast.info('qBittorrent updated', 'New host/credentials are live.', 'config');
+    } catch (err) {
+      setError(err instanceof HarvesterClientError ? err.user_message : String(err));
+      setStatus(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function resetForm(): void {
+    setHost(settings.qbt.host);
+    setPort(settings.qbt.port);
+    setUser(settings.qbt.user);
+    setPass('');
+    setError(null);
+    setStatus(null);
+  }
+
+  return (
+    <Section title="qBittorrent">
+      <Row label="Host" value={`${settings.qbt.host}:${settings.qbt.port}`} />
+      <Row label="User" value={settings.qbt.user || '(not set)'} />
+      <Row label="Password set" value={settings.qbt.password_set ? 'yes' : 'no'} />
+      <Row label="Allowed client" value={settings.qbt.allowed_client_ok ? 'yes' : 'no'} />
+      {!editing ? (
+        <button
+          type="button"
+          onClick={() => {
+            resetForm();
+            setEditing(true);
+          }}
+          className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-bg-elev border border-zinc-800 rounded text-sm hover:bg-zinc-800 cursor-pointer"
+        >
+          <Pencil className="h-3.5 w-3.5" /> Change connection
+        </button>
+      ) : (
+        <div className="mt-3 space-y-2 max-w-md">
+          <div className="grid grid-cols-[1fr_96px] gap-2">
+            <label className="block">
+              <span className="block text-xs text-text-muted mb-1">Host</span>
+              <input
+                type="text"
+                value={host}
+                onChange={(e) => setHost(e.target.value.trim())}
+                className="w-full px-3 py-2 bg-bg-elev border border-zinc-800 rounded text-sm font-mono focus:border-accent outline-none"
+              />
+            </label>
+            <label className="block">
+              <span className="block text-xs text-text-muted mb-1">Port</span>
+              <input
+                type="number"
+                min={1}
+                max={65535}
+                value={port}
+                onChange={(e) => setPort(Number(e.target.value))}
+                className="w-full px-3 py-2 bg-bg-elev border border-zinc-800 rounded text-sm font-mono focus:border-accent outline-none"
+              />
+            </label>
+          </div>
+          <label className="block">
+            <span className="block text-xs text-text-muted mb-1">User</span>
+            <input
+              type="text"
+              value={user}
+              onChange={(e) => setUser(e.target.value)}
+              className="w-full px-3 py-2 bg-bg-elev border border-zinc-800 rounded text-sm font-mono focus:border-accent outline-none"
+            />
+          </label>
+          <label className="block">
+            <span className="block text-xs text-text-muted mb-1">
+              Password{' '}
+              <span className="text-text-subtle">
+                (leave empty to keep current)
+              </span>
+            </span>
+            <input
+              type="password"
+              value={pass}
+              onChange={(e) => setPass(e.target.value)}
+              placeholder="…"
+              className="w-full px-3 py-2 bg-bg-elev border border-zinc-800 rounded text-sm font-mono focus:border-accent outline-none"
+            />
+          </label>
+          {status && <div className="text-xs text-text-muted">{status}</div>}
+          {error && <div className="text-xs text-accent-danger">{error}</div>}
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                void testAndSave();
+              }}
+              disabled={!host || !port || !user || busy}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent rounded text-sm font-medium disabled:opacity-50 cursor-pointer"
+            >
+              {busy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <KeyRound className="h-3.5 w-3.5" />
+              )}
+              Test &amp; save
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                resetForm();
+                setEditing(false);
+              }}
+              disabled={busy}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-bg-elev border border-zinc-800 rounded text-sm hover:bg-zinc-800 cursor-pointer disabled:opacity-50"
+            >
+              <X className="h-3.5 w-3.5" /> Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </Section>
   );
 }
