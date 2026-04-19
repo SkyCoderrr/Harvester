@@ -146,7 +146,16 @@ export interface DashboardSummary {
   downloaded_today: number;
   /** Active = currently transferring data (downloading + uploading). */
   active_count: number;
-  /** Stalled = waiting for peers (stalledDL + stalledUP). */
+  /**
+   * Seeding = any torrent whose role is to upload, regardless of peer activity
+   * at the moment. Covers uploading, queuedUP, stalledUP. v2 bucket.
+   */
+  seeding_count: number;
+  /**
+   * Stalled = trying to download but no peers. Does NOT include `stalledUP`
+   * (a completed torrent with no active leechers is still healthy seeding,
+   * not stalled). Changed in v2; v1 conflated both.
+   */
   stalled_count: number;
   /** Errored or checking/paused states. */
   error_count: number;

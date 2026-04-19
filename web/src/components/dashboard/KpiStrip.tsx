@@ -1,6 +1,5 @@
 import {
   Activity,
-  AlertTriangle,
   ArrowDown,
   ArrowUp,
   Award,
@@ -10,14 +9,15 @@ import {
 import type { DashboardSummary } from '@shared/types';
 import { KpiTile } from './KpiTile';
 import { DiskTile } from './DiskTile';
+import { TorrentsTile } from './TorrentsTile';
 import { formatBytes, formatDurationShort } from '../../lib/format';
 
-// FR-V2-17 / FR-V2-18: new UPLOAD, DOWNLOAD, SEEDING TIME tiles. Strip is a
-// responsive 9-tile grid at xl/2xl; 5+4 wrap at lg; single column at sm.
+// KPI strip: 7 cells wide at 2xl (one is the 2-col TorrentsTile → 8 grid
+// slots). Wraps responsively down to 2 columns.
 
 export function KpiStrip({ data }: { data: DashboardSummary | undefined }): JSX.Element {
   return (
-    <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-9">
+    <div className="grid gap-3 grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 2xl:grid-cols-8">
       <KpiTile
         label="Ratio"
         icon={TrendingUp}
@@ -33,6 +33,7 @@ export function KpiStrip({ data }: { data: DashboardSummary | undefined }): JSX.
         delta={data?.seedtime_sec_delta_24h ?? null}
         deltaFormatter={(d) => formatDurationShort(d)}
         deltaSuffix="· 24h"
+        hint={data?.seedtime_sec == null ? 'no probe yet' : undefined}
       />
       <KpiTile
         label="Bonus points"
@@ -73,32 +74,7 @@ export function KpiStrip({ data }: { data: DashboardSummary | undefined }): JSX.
         deltaSuffix="· 24h"
         deltaInvert
       />
-      <KpiTile
-        label="Active"
-        icon={Activity}
-        value={String(data?.active_count ?? 0)}
-        tone="text-accent-success"
-        hint={
-          data && (data.stalled_count > 0 || data.error_count > 0)
-            ? `${data.stalled_count} stalled · ${data.error_count} error`
-            : 'all moving'
-        }
-      />
-      <KpiTile
-        label="Stalled / error"
-        icon={AlertTriangle}
-        value={String((data?.stalled_count ?? 0) + (data?.error_count ?? 0))}
-        tone={
-          (data?.stalled_count ?? 0) + (data?.error_count ?? 0) > 0
-            ? 'text-accent-warn'
-            : 'text-text-muted'
-        }
-        hint={
-          data
-            ? `${data.stalled_count} stalled · ${data.error_count} error`
-            : undefined
-        }
-      />
+      <TorrentsTile data={data} />
       <DiskTile data={data} />
     </div>
   );

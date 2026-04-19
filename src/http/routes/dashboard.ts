@@ -20,14 +20,23 @@ export function registerDashboardRoute(app: FastifyInstance, deps: HttpDeps): vo
     }
     const now = unixSec();
 
-    // Active vs stalled vs error split.
+    // Active / seeding / stalled / error buckets (v2 definitions).
+    // - active  = currently moving bytes (downloading OR uploading)
+    // - seeding = any torrent whose role is upload, regardless of peer count:
+    //             uploading, queuedUP, stalledUP (the last is completed but
+    //             no leechers right now — still healthy, NOT stalled).
+    // - stalled = trying to download but no peers (stalledDL only).
+    // - error   = anything error-stateful.
     let active = 0;
+    let seedingCount = 0;
     let stalled = 0;
     let error = 0;
     for (const t of torrents) {
-      if (/^(?:downloading|uploading)$/i.test(t.state)) active++;
-      else if (/^stalled/i.test(t.state)) stalled++;
-      else if (/error/i.test(t.state)) error++;
+      const s = t.state;
+      if (/error/i.test(s)) error++;
+      else if (/^stalledDL$/i.test(s)) stalled++;
+      else if (/^(?:uploading|queuedUP|stalledUP)$/i.test(s)) seedingCount++;
+      else if (/^downloading$/i.test(s)) active++;
     }
     // Legacy fields (kept for wire compat).
     const leeching = torrents.filter((t) => /^(?:downloading|stalledDL|metaDL)/i.test(t.state)).length;
@@ -89,6 +98,7 @@ export function registerDashboardRoute(app: FastifyInstance, deps: HttpDeps): vo
       uploaded_today: 0,
       downloaded_today: 0,
       active_count: active,
+      seeding_count: seedingCount,
       stalled_count: stalled,
       error_count: error,
       active_leeching: leeching,
