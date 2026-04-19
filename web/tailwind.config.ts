@@ -22,15 +22,18 @@ export default {
           warn: '#eab308',
           danger: '#ef4444',
         },
+        // FR-V2-26: single source of truth is web/src/lib/discount.ts.
+        // This palette is kept in sync for any Tailwind util that still
+        // references `discount-*` class names. `PERCENT_30` removed per
+        // MTEAM_API §3.3 — value is not real on the wire.
         discount: {
           FREE: '#22c55e',
           '_2X_FREE': '#a855f7',
           '_2X': '#3b82f6',
           PERCENT_50: '#eab308',
-          PERCENT_30: '#f59e0b',
           PERCENT_70: '#f97316',
           '_2X_PERCENT_50': '#ec4899',
-          NORMAL: '#71717a',
+          NORMAL: '#a1a1aa',
         },
       },
       fontFamily: {

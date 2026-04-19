@@ -6,17 +6,7 @@ import { api } from '../api/client';
 import type { TorrentRow } from '@shared/types';
 import { formatBytes, formatEta, formatRate } from '../lib/format';
 import { toast } from '../store/toast';
-
-const DISCOUNT_COLOR: Record<string, string> = {
-  FREE: '#22c55e',
-  _2X_FREE: '#a855f7',
-  _2X: '#3b82f6',
-  PERCENT_50: '#eab308',
-  PERCENT_70: '#f97316',
-  PERCENT_30: '#f59e0b',
-  _2X_PERCENT_50: '#ec4899',
-  NORMAL: '#71717a',
-};
+import { DiscountBadge } from '../components/ui/DiscountBadge';
 
 export default function TorrentsPage(): JSX.Element {
   const q = useQuery({
@@ -417,16 +407,10 @@ function ProgressBar({ pct }: { pct: number }): JSX.Element {
   );
 }
 
+// `DiscountTag` is now the shared `DiscountBadge` (FR-V2-26); local helper
+// kept for backward-compat with row consumers.
 function DiscountTag({ discount }: { discount: string }): JSX.Element {
-  const color = DISCOUNT_COLOR[discount] ?? '#71717a';
-  return (
-    <span
-      className="text-[10px] font-mono px-1.5 py-0.5 rounded border font-medium"
-      style={{ borderColor: color + '44', background: color + '1a', color }}
-    >
-      {discount.replace(/^_/, '')}
-    </span>
-  );
+  return <DiscountBadge discount={discount} />;
 }
 
 function stateBadge(state: string): { label: string; dot: string } {

@@ -32,3 +32,19 @@ export function formatEta(seconds: number): string {
   const h = Math.round((seconds % 86400) / 3600);
   return `${d}d ${h}h`;
 }
+
+/**
+ * Short duration, e.g. "124d 6h", "3h 15m". Max two segments. Used by the
+ * SeedingTime KPI tile. Returns "—" for null/negative/infinite.
+ */
+export function formatDurationShort(seconds: number | null | undefined): string {
+  if (seconds == null || !Number.isFinite(seconds) || seconds <= 0) return '—';
+  const s = Math.floor(seconds);
+  const days = Math.floor(s / 86400);
+  const hours = Math.floor((s % 86400) / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  if (days > 0) return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+  if (hours > 0) return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  if (mins > 0) return `${mins}m`;
+  return `${s}s`;
+}
