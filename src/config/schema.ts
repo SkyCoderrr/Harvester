@@ -52,7 +52,7 @@ export const configSchemaZ = z
             ]),
           )
           .min(1)
-          .default(['normal', 'movie', 'tvshow', 'music']),
+          .default(['normal', 'adult', 'movie', 'music', 'tvshow']),
         // Re-evaluation — keep checking previously-skipped or errored
         // torrents in subsequent polls. Duplicate downloads are blocked by
         // two layers that bypass these knobs entirely: (a) canReEval only
@@ -87,7 +87,7 @@ export const configSchemaZ = z
       .default({
         interval_sec: 90,
         backoff_cap_sec: 1800,
-        modes: ['normal', 'movie', 'tvshow', 'music'],
+        modes: ['normal', 'adult', 'movie', 'music', 'tvshow'],
         reeval: { window_sec: 7 * 86400, max_attempts: 30, min_discount_headroom_sec: 600 },
       }),
     profile_probe: z
