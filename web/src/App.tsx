@@ -36,7 +36,19 @@ export default function App(): JSX.Element {
   const firstRunDone = settingsQ.data?.first_run_completed ?? true;
 
   if (settingsQ.isLoading) {
-    return <div className="flex h-full items-center justify-center text-text-muted">Loading…</div>;
+    // Render LoginModal alongside the loading indicator so an auth-gated
+    // 401 (triggered by api/client.ts → openLogin()) surfaces the modal
+    // immediately, instead of the user seeing a frozen "Loading…" screen
+    // while React Query burns through its retry budget before reaching
+    // the main UI branch.
+    return (
+      <>
+        <div className="flex h-full items-center justify-center text-text-muted">
+          Loading…
+        </div>
+        <LoginModal />
+      </>
+    );
   }
 
   if (!firstRunDone) {

@@ -35,17 +35,28 @@ if not exist "web\dist\index.html" (
   if errorlevel 1 (echo web build failed & popd & exit /b 1)
 )
 
-REM Resolve the backend port from the user's config (default 5173).
+REM Resolve backend host+port from the user's config. bind_host may be a
+REM specific LAN IP (loopback won't work in that case), 0.0.0.0 (any
+REM interface), or 127.0.0.1. For the browser URL we use the configured
+REM host verbatim, falling back to 127.0.0.1 only when bind_host is the
+REM all-interfaces wildcard.
+set HOST=127.0.0.1
 set PORT=5173
-for /f "delims=" %%P in ('node -e "try{console.log(JSON.parse(require('fs').readFileSync(process.env.APPDATA+'\\Harvester\\config.json','utf8')).port||5173)}catch{console.log(5173)}"') do set PORT=%%P
+for /f "delims=" %%P in ('node -e "try{const c=JSON.parse(require('fs').readFileSync(process.env.APPDATA+'\\Harvester\\config.json','utf8'));const h=c.bind_host==='0.0.0.0'?'127.0.0.1':(c.bind_host||'127.0.0.1');console.log((h)+':'+(c.port||5173))}catch{console.log('127.0.0.1:5173')}"') do (
+  for /f "tokens=1,2 delims=:" %%A in ("%%P") do (
+    set HOST=%%A
+    set PORT=%%B
+  )
+)
+if "%HOST%"=="" set HOST=127.0.0.1
 if "%PORT%"=="" set PORT=5173
 
-echo Starting Harvester at http://127.0.0.1:%PORT%/ ...
+echo Starting Harvester at http://%HOST%:%PORT%/ ...
 
 REM Open the browser a few seconds after launch so the server has time
 REM to bind the port. Runs detached; hidden PowerShell window exits
 REM immediately after issuing Start-Process.
-start "" powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep 3; Start-Process 'http://127.0.0.1:%PORT%/'"
+start "" powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep 3; Start-Process 'http://%HOST%:%PORT%/'"
 
 call npm start
 set EXITCODE=%ERRORLEVEL%
