@@ -43,7 +43,11 @@ export function startWorkers(deps: {
     qbt: deps.qbt,
   });
   const emergency = createEmergencyMonitor(deps);
-  const grabRetry = createGrabRetryWorker({ logger: deps.logger, downloader });
+  const grabRetry = createGrabRetryWorker({
+    logger: deps.logger,
+    downloader,
+    serviceState: deps.serviceState,
+  });
 
   const workers = [poller, lifecycle, profile, transfer, statsDaily, emergency, grabRetry];
   for (const w of workers) w.start();

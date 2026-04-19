@@ -80,14 +80,16 @@ async function main(): Promise<void> {
     const cfg = configStore.get();
     if (!cfg.first_run_completed) return;
     if (workerSet) return;
-    // FR-V2-38: persisted user intent gates worker startup. The boot path
-    // never overwrites the intent — only an explicit /service/resume does.
+    // Workers always start when preflight passes, regardless of pause state.
+    // The user-pause only gates grab-related tick work (poller + grabRetry
+    // self-skip when PAUSED_USER). Probes (profile, transfer, stats,
+    // lifecycle, emergency) keep updating so the dashboard KPIs stay live
+    // even while grabs are paused.
     if (serviceState.get().desired_user_intent === 'paused') {
       logger.info(
         { component: 'bootstrap' },
-        'workers not started: persisted user intent is paused',
+        'starting workers with user intent = paused (poller + grabRetry will self-skip)',
       );
-      return;
     }
     const report = await runPreflight({ config: cfg, logger, mteam, qbt });
     serviceState.dispatch({
@@ -158,16 +160,6 @@ async function main(): Promise<void> {
     });
   });
 
-  async function stopWorkers(): Promise<void> {
-    if (!workerSet) return;
-    try {
-      await workerSet.stopAll();
-    } catch (err) {
-      logger.warn({ component: 'bootstrap', err }, 'stopAll failed during pause');
-    }
-    workerSet = null;
-  }
-
   const app = await createHttpServer({
     config: configStore,
     db,
@@ -180,8 +172,12 @@ async function main(): Promise<void> {
     downloader,
     paths,
     onFirstRunComplete: ensureWorkersStarted,
+    // Pause/resume no longer stop or restart the worker set. They flip the
+    // serviceState status; poller + grabRetry self-skip when paused, and
+    // the other probe workers keep feeding the dashboard. Resume only
+    // needs to kick ensureWorkersStarted for the edge case where preflight
+    // was down at boot and the user pressed Resume after fixing it.
     onUserResume: ensureWorkersStarted,
-    onUserPause: stopWorkers,
     onRestart: () => {
       logger.info({ component: 'bootstrap' }, 'restart requested');
     },

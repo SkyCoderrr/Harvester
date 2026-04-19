@@ -1,11 +1,11 @@
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import type { DashboardSummary } from '@shared/types';
 import { formatBytesDecimal } from '../../lib/format';
 import { DeltaPill } from './shared';
+import { TileFrame, TileHeader } from './KpiTile';
 
-// Combined Uploaded / Downloaded tile (two sub-cells). Replaces the v2-Phase2
-// pair of separate Uploaded and Downloaded KpiTiles. Decimal GB (network
-// convention) per user request.
+// Combined Volume tile — Uploaded on top, Downloaded below. 1-wide so it
+// fits the unified 7-column KPI strip at xl+ viewports.
 
 export function VolumeTile({
   data,
@@ -18,58 +18,54 @@ export function VolumeTile({
   const downDelta = data?.downloaded_bytes_delta_24h ?? null;
 
   return (
-    <div className="bg-bg-sub border border-zinc-800 rounded-lg px-4 py-3 col-span-2">
-      <div className="text-[10px] uppercase tracking-wide text-text-subtle">
-        Volume (lifetime)
-      </div>
-      <div className="mt-1 grid grid-cols-2 gap-4">
-        <Half
-          icon={<ArrowUp className="h-4 w-4 text-accent-success" />}
-          label="Uploaded"
+    <TileFrame>
+      <TileHeader
+        icon={<ArrowUpDown className="h-3.5 w-3.5 text-accent" />}
+        tintBg="bg-accent/10"
+        label="Volume"
+      />
+      <div className="mt-auto space-y-1.5">
+        <Row
+          icon={<ArrowUp className="h-3 w-3 text-accent-success" />}
           value={up != null ? formatBytesDecimal(up) : '—'}
           delta={upDelta}
         />
-        <Half
-          icon={<ArrowDown className="h-4 w-4 text-accent" />}
-          label="Downloaded"
+        <Row
+          icon={<ArrowDown className="h-3 w-3 text-accent" />}
           value={down != null ? formatBytesDecimal(down) : '—'}
           delta={downDelta}
           invert
         />
       </div>
-    </div>
+    </TileFrame>
   );
 }
 
-function Half({
+function Row({
   icon,
-  label,
   value,
   delta,
   invert,
 }: {
   icon: React.ReactNode;
-  label: string;
   value: string;
   delta: number | null;
   invert?: boolean;
 }): JSX.Element {
   return (
-    <div className="min-w-0">
-      <div className="flex items-center gap-1.5">
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-1.5 min-w-0">
         {icon}
-        <span className="text-[10px] uppercase tracking-wide text-text-subtle">{label}</span>
-      </div>
-      <div className="text-lg font-semibold truncate font-mono tabular-nums mt-0.5">
-        {value}
+        <span className="text-sm font-semibold font-mono tabular-nums truncate">{value}</span>
       </div>
       {delta != null && (
-        <DeltaPill
-          delta={delta}
-          formatter={(d) => formatBytesDecimal(Math.abs(d))}
-          suffix="· 24h"
-          invertColors={invert}
-        />
+        <div className="shrink-0">
+          <DeltaPill
+            delta={delta}
+            formatter={(d) => formatBytesDecimal(Math.abs(d))}
+            invertColors={invert}
+          />
+        </div>
       )}
     </div>
   );

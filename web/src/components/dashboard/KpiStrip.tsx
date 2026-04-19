@@ -6,14 +6,14 @@ import { TorrentsTile } from './TorrentsTile';
 import { VolumeTile } from './VolumeTile';
 import { formatDurationShort } from '../../lib/format';
 
-// KPI strip layout:
-//   Ratio | SeedTime | Bonus | Grabs | Volume(2) | Torrents(2) | Disk
-// Total = 8 slots at the widest breakpoint. Volume and Disk sit next to each
-// other so the lifetime-volume + disk-state reads as one coherent block.
+// KPI strip: 7 tiles, all 1-wide, all the same height. Grid breakpoints:
+//   sm   2 cols  → 2x4 wrap
+//   md   4 cols  → 4 + 3
+//   xl   7 cols  → single row
 
 export function KpiStrip({ data }: { data: DashboardSummary | undefined }): JSX.Element {
   return (
-    <div className="grid gap-3 grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 2xl:grid-cols-8">
+    <div className="grid gap-3 grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
       <KpiTile
         label="Ratio"
         icon={TrendingUp}
@@ -32,7 +32,7 @@ export function KpiStrip({ data }: { data: DashboardSummary | undefined }): JSX.
         hint={data?.seedtime_sec == null ? 'no probe yet' : undefined}
       />
       <KpiTile
-        label="Bonus points"
+        label="Bonus"
         icon={Award}
         value={data?.bonus_points?.toLocaleString() ?? '—'}
         delta={data?.bonus_delta_1h ?? null}
@@ -40,7 +40,7 @@ export function KpiStrip({ data }: { data: DashboardSummary | undefined }): JSX.
         deltaSuffix="· 1h"
       />
       <KpiTile
-        label="Grabs (24h)"
+        label="Grabs 24h"
         icon={Activity}
         value={String(data?.grabs_24h ?? '—')}
         delta={data?.grabs_delta_24h ?? null}
