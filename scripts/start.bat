@@ -1,10 +1,11 @@
 @echo off
 setlocal
 
-REM Harvester launcher. Installs dependencies if missing, builds the
-REM server and web UI if either output is absent, starts the backend
-REM (which serves the built UI on the same port via @fastify/static),
-REM and opens a browser to the local URL.
+REM Harvester launcher. Installs dependencies if missing, builds server
+REM and web UI if either output is absent, reads the bind host+port from
+REM %APPDATA%\Harvester\config.json via scripts\resolve-url.cjs, launches
+REM the backend (which serves the built UI on the same port via
+REM @fastify/static), and opens the default browser at that URL.
 
 set SCRIPT_DIR=%~dp0
 pushd "%SCRIPT_DIR%.."
@@ -35,30 +36,37 @@ if not exist "web\dist\index.html" (
   if errorlevel 1 (echo web build failed & popd & exit /b 1)
 )
 
-REM Resolve backend host+port from the user's config. bind_host may be a
-REM specific LAN IP (loopback won't work in that case), 0.0.0.0 (any
-REM interface), or 127.0.0.1. For the browser URL we use the configured
-REM host verbatim, falling back to 127.0.0.1 only when bind_host is the
-REM all-interfaces wildcard.
-set HOST=127.0.0.1
-set PORT=5173
-for /f "delims=" %%P in ('node -e "try{const c=JSON.parse(require('fs').readFileSync(process.env.APPDATA+'\\Harvester\\config.json','utf8'));const h=c.bind_host==='0.0.0.0'?'127.0.0.1':(c.bind_host||'127.0.0.1');console.log((h)+':'+(c.port||5173))}catch{console.log('127.0.0.1:5173')}"') do (
-  for /f "tokens=1,2 delims=:" %%A in ("%%P") do (
-    set HOST=%%A
-    set PORT=%%B
-  )
-)
+REM resolve-url.cjs prints exactly two lines: HOST then PORT. The /f loop
+REM below captures them sequentially  the first iteration body runs with
+REM %%L = HOST, the second with %%L = PORT.
+set HOST=
+set PORT=
+for /f "usebackq delims=" %%L in (`node "%SCRIPT_DIR%resolve-url.cjs"`) do call :capture "%%L"
 if "%HOST%"=="" set HOST=127.0.0.1
 if "%PORT%"=="" set PORT=5173
 
 echo Starting Harvester at http://%HOST%:%PORT%/ ...
 
 REM Open the browser a few seconds after launch so the server has time
-REM to bind the port. Runs detached; hidden PowerShell window exits
-REM immediately after issuing Start-Process.
+REM to bind the port. Runs detached; hidden PowerShell exits immediately
+REM after issuing Start-Process.
 start "" powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep 3; Start-Process 'http://%HOST%:%PORT%/'"
 
 call npm start
 set EXITCODE=%ERRORLEVEL%
 popd
 exit /b %EXITCODE%
+
+:capture
+REM Called once per line from resolve-url.cjs. First call fills HOST,
+REM second fills PORT. The ~ in %~1 strips the surrounding quotes added
+REM by the caller.
+if "%HOST%"=="" (
+  set HOST=%~1
+  goto :eof
+)
+if "%PORT%"=="" (
+  set PORT=%~1
+  goto :eof
+)
+goto :eof
