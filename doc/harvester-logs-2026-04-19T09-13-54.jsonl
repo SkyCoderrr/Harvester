@@ -1,0 +1,54 @@
+{"ts":1776567616,"level":"INFO","component":"logger","message":"db sink attached","meta":{}}
+{"ts":1776567616,"level":"INFO","component":"bootstrap","message":"http listening","meta":{"address":"http://127.0.0.1:5173"}}
+{"ts":1776567616,"level":"INFO","component":"preflight","message":"preflight complete","meta":{"report":{"ok":true,"hard":[],"soft":[],"mteam":true,"qbt":true,"allowed_client":true,"qbt_version":"v5.1.4","disk":true}}}
+{"ts":1776567616,"level":"INFO","component":"workers","message":"workers started","meta":{}}
+{"ts":1776568777,"level":"INFO","component":"logger","message":"db sink attached","meta":{}}
+{"ts":1776568777,"level":"INFO","component":"bootstrap","message":"http listening","meta":{"address":"http://127.0.0.1:5173"}}
+{"ts":1776568778,"level":"INFO","component":"preflight","message":"preflight complete","meta":{"report":{"ok":true,"hard":[],"soft":[],"mteam":true,"qbt":true,"allowed_client":true,"qbt_version":"v5.1.4","disk":true}}}
+{"ts":1776568778,"level":"INFO","component":"workers","message":"workers started","meta":{}}
+{"ts":1776569919,"level":"INFO","component":"logger","message":"db sink attached","meta":{}}
+{"ts":1776569919,"level":"INFO","component":"bootstrap","message":"http listening","meta":{"address":"http://127.0.0.1:5173"}}
+{"ts":1776569919,"level":"INFO","component":"preflight","message":"preflight complete","meta":{"report":{"ok":true,"hard":[],"soft":[],"mteam":true,"qbt":true,"allowed_client":true,"qbt_version":"v5.1.4","disk":true}}}
+{"ts":1776569919,"level":"INFO","component":"workers","message":"workers started","meta":{}}
+{"ts":1776570430,"level":"INFO","component":"logger","message":"db sink attached","meta":{}}
+{"ts":1776570430,"level":"INFO","component":"bootstrap","message":"http listening","meta":{"address":"http://127.0.0.1:5173"}}
+{"ts":1776570430,"level":"INFO","component":"preflight","message":"preflight complete","meta":{"report":{"ok":true,"hard":[],"soft":[],"mteam":true,"qbt":true,"allowed_client":true,"qbt_version":"v5.1.4","disk":true}}}
+{"ts":1776570430,"level":"INFO","component":"workers","message":"workers started","meta":{}}
+{"ts":1776570436,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169029"}}
+{"ts":1776570442,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169001"}}
+{"ts":1776570448,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1168995"}}
+{"ts":1776570453,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169030"}}
+{"ts":1776570458,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169019"}}
+{"ts":1776576311,"level":"WARN","component":"transferProbe","message":"transfer probe failed","meta":{"err":{"type":"HarvesterError","message":"qBittorrent isn't responding.: fetch failed: connect ECONNREFUSED 127.0.0.1:8080","stack":"HarvesterError: qBittorrent isn't responding.\n    at request (C:\\Users\\sky20\\Documents\\MTeam\\src\\qbt\\client.ts:194:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async Object.getTransferInfo (C:\\Users\\sky20\\Documents\\MTeam\\src\\qbt\\client.ts:233:14)\n    at async Object.tick (C:\\Users\\sky20\\Documents\\MTeam\\src\\workers\\transferProbe.ts:20:20)\n    at async runTick (C:\\Users\\sky20\\Documents\\MTeam\\src\\workers\\loopWorker.ts:49:7)\ncaused by: TypeError: fetch failed\ncaused by: Error: connect ECONNREFUSED 127.0.0.1:8080\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1645:16)","code":"QBT_UNREACHABLE","user_message":"qBittorrent isn't responding.","retryable":true,"name":"HarvesterError"}}}
+{"ts":1776576371,"level":"WARN","component":"transferProbe","message":"transfer probe failed","meta":{"err":{"type":"HarvesterError","message":"qBittorrent isn't responding.: fetch failed: connect ECONNREFUSED 127.0.0.1:8080","stack":"HarvesterError: qBittorrent isn't responding.\n    at request (C:\\Users\\sky20\\Documents\\MTeam\\src\\qbt\\client.ts:194:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async Object.getTransferInfo (C:\\Users\\sky20\\Documents\\MTeam\\src\\qbt\\client.ts:233:14)\n    at async Object.tick (C:\\Users\\sky20\\Documents\\MTeam\\src\\workers\\transferProbe.ts:20:20)\n    at async runTick (C:\\Users\\sky20\\Documents\\MTeam\\src\\workers\\loopWorker.ts:49:7)\ncaused by: TypeError: fetch failed\ncaused by: Error: connect ECONNREFUSED 127.0.0.1:8080\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1645:16)","code":"QBT_UNREACHABLE","user_message":"qBittorrent isn't responding.","retryable":true,"name":"HarvesterError"}}}
+{"ts":1776586156,"level":"INFO","component":"logger","message":"db sink attached","meta":{}}
+{"ts":1776586156,"level":"INFO","component":"bootstrap","message":"workers not started: persisted user intent is paused","meta":{}}
+{"ts":1776586156,"level":"INFO","component":"bootstrap","message":"http listening","meta":{"address":"http://127.0.0.1:5173"}}
+{"ts":1776586156,"level":"INFO","component":"bootstrap","message":"argon2 bench ok","meta":{"argon2_hash_ms":61}}
+{"ts":1776587374,"level":"INFO","component":"logger","message":"db sink attached","meta":{}}
+{"ts":1776587374,"level":"INFO","component":"bootstrap","message":"workers not started: persisted user intent is paused","meta":{}}
+{"ts":1776587374,"level":"INFO","component":"bootstrap","message":"http listening","meta":{"address":"http://127.0.0.1:5173"}}
+{"ts":1776587374,"level":"INFO","component":"bootstrap","message":"argon2 bench ok","meta":{"argon2_hash_ms":73}}
+{"ts":1776587816,"level":"WARN","component":"http","message":"error handler","meta":{"req_id":"563063a4-6710-44fe-a771-787bd8d2961c","url":"/api/rules/1","err":{"type":"HarvesterError","message":"Request body failed validation.","stack":"HarvesterError: Request body failed validation.\n    at Object.<anonymous> (C:\\Users\\sky20\\Documents\\MTeam\\src\\http\\server.ts:136:14)\n    at handleError (C:\\Users\\sky20\\Documents\\MTeam\\node_modules\\fastify\\lib\\error-handler.js:69:20)\n    at onErrorHook (C:\\Users\\sky20\\Documents\\MTeam\\node_modules\\fastify\\lib\\reply.js:841:5)\n    at Reply.send (C:\\Users\\sky20\\Documents\\MTeam\\node_modules\\fastify\\lib\\reply.js:157:5)\n    at C:\\Users\\sky20\\Documents\\MTeam\\node_modules\\fastify\\lib\\wrapThenable.js:41:13\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)","code":"VALIDATION_FAILED","user_message":"Request body failed validation.","context":{"issues":[{"code":"invalid_type","expected":"array","received":"object","path":["rules"],"message":"Expected array, received object"}]},"retryable":false,"name":"HarvesterError"}}}
+{"ts":1776587820,"level":"WARN","component":"http","message":"error handler","meta":{"req_id":"2966373c-e44e-4c66-ad8c-fca0c8555532","url":"/api/rules/1","err":{"type":"HarvesterError","message":"Request body failed validation.","stack":"HarvesterError: Request body failed validation.\n    at Object.<anonymous> (C:\\Users\\sky20\\Documents\\MTeam\\src\\http\\server.ts:136:14)\n    at handleError (C:\\Users\\sky20\\Documents\\MTeam\\node_modules\\fastify\\lib\\error-handler.js:69:20)\n    at onErrorHook (C:\\Users\\sky20\\Documents\\MTeam\\node_modules\\fastify\\lib\\reply.js:841:5)\n    at Reply.send (C:\\Users\\sky20\\Documents\\MTeam\\node_modules\\fastify\\lib\\reply.js:157:5)\n    at C:\\Users\\sky20\\Documents\\MTeam\\node_modules\\fastify\\lib\\wrapThenable.js:41:13\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)","code":"VALIDATION_FAILED","user_message":"Request body failed validation.","context":{"issues":[{"code":"invalid_type","expected":"array","received":"object","path":["rules"],"message":"Expected array, received object"}]},"retryable":false,"name":"HarvesterError"}}}
+{"ts":1776588317,"level":"INFO","component":"logger","message":"db sink attached","meta":{}}
+{"ts":1776588317,"level":"INFO","component":"bootstrap","message":"workers not started: persisted user intent is paused","meta":{}}
+{"ts":1776588317,"level":"INFO","component":"bootstrap","message":"http listening","meta":{"address":"http://127.0.0.1:5173"}}
+{"ts":1776588317,"level":"INFO","component":"bootstrap","message":"argon2 bench ok","meta":{"argon2_hash_ms":62}}
+{"ts":1776589025,"level":"INFO","component":"logger","message":"db sink attached","meta":{}}
+{"ts":1776589025,"level":"INFO","component":"bootstrap","message":"starting workers with user intent = paused (poller + grabRetry will self-skip)","meta":{}}
+{"ts":1776589025,"level":"INFO","component":"bootstrap","message":"http listening","meta":{"address":"http://127.0.0.1:5173"}}
+{"ts":1776589025,"level":"INFO","component":"bootstrap","message":"argon2 bench ok","meta":{"argon2_hash_ms":91}}
+{"ts":1776589025,"level":"INFO","component":"preflight","message":"preflight complete","meta":{"report":{"ok":true,"hard":[],"soft":[],"mteam":true,"qbt":true,"allowed_client":true,"qbt_version":"v5.1.4","disk":true}}}
+{"ts":1776589025,"level":"INFO","component":"workers","message":"workers started","meta":{}}
+{"ts":1776589661,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169146"}}
+{"ts":1776589667,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169132"}}
+{"ts":1776589672,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169130"}}
+{"ts":1776589678,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169114"}}
+{"ts":1776589683,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169106"}}
+{"ts":1776589689,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169103"}}
+{"ts":1776589694,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169145"}}
+{"ts":1776589699,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169148"}}
+{"ts":1776589705,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169142"}}
+{"ts":1776589711,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169137"}}
+{"ts":1776589716,"level":"WARN","component":"downloader","message":"grab verify failed","meta":{"mteam_id":"1169127"}}

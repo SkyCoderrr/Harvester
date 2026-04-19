@@ -20,6 +20,7 @@ import { HarvesterError, normalizeError } from '../errors/index.js';
 import { GENDL_TOKEN_TTL_SEC } from '@shared/constants.js';
 import { unixSec } from '../util/time.js';
 import { fetchWithTimeout } from '../util/fetchWithTimeout.js';
+import { extractInfohash } from '../util/torrentInfohash.js';
 
 /**
  * Downloader. Event-driven via `enqueue()`; retry via `drainQueued()` from the grabRetry worker.
@@ -50,11 +51,29 @@ export function createDownloader(deps: {
     torrent: NormalizedTorrent,
     matched: Array<{ id: number; name: string }>,
   ): Promise<void> {
-    // Collision check: is a torrent with same name + size already in qBt under harvester tag?
-    const existing = await qbt.listTorrents({ tag: 'harvester' });
-    const collision = existing.find(
-      (t) => t.name === torrent.name && Math.abs(t.size - torrent.size_bytes) < 1024,
-    );
+    // SPIKE §1: api.m-team.cc 302s default UAs to google.com. qBt's libtorrent fetcher
+    // inherits this failure mode, so we download the .torrent file ourselves with our
+    // configured UA and hand the bytes to qBt via multipart upload.
+    const tokenUrl = await mteam.genDlToken(torrent.mteam_id);
+    const torrentFile = await fetchTorrentFile(tokenUrl);
+
+    // Extract the real infohash from the .torrent bytes (SHA-1 of the info
+    // dict). Using this for both collision detection and post-add verify is
+    // orders-of-magnitude more reliable than the old name+size heuristic —
+    // qBt often renames the visible title to the .torrent's internal name,
+    // which caused false "grab_verify_failed" reports whenever the two
+    // disagreed.
+    const expectedInfohash = extractInfohash(torrentFile)?.toLowerCase() ?? null;
+
+    // Collision check on ALL torrents (not just harvester-tagged) — if the
+    // user added this manually, we don't want to grab it twice.
+    const existingAll = await qbt.listTorrents();
+    const collision =
+      (expectedInfohash &&
+        existingAll.find((t) => t.hash.toLowerCase() === expectedInfohash)) ||
+      existingAll.find(
+        (t) => t.name === torrent.name && Math.abs(t.size - torrent.size_bytes) < 1024,
+      );
     if (collision) {
       insertEventSkipDup(torrent);
       logger.info(
@@ -63,19 +82,6 @@ export function createDownloader(deps: {
       );
       return;
     }
-
-    const tokenUrl = await mteam.genDlToken(torrent.mteam_id);
-
-    // Re-check discount right before add (FR-DL-04)
-    // The normalized torrent's discount is from this poll cycle; to minimize the window
-    // we don't re-poll for a fresh one here — the spike shows genDlToken succeeds even
-    // on NORMAL torrents, so a brief flip between poll and add can still slip through.
-    // The lifecycle worker's safety override (FR-LC-03) catches this within 5 minutes.
-
-    // SPIKE §1: api.m-team.cc 302s default UAs to google.com. qBt's libtorrent fetcher
-    // inherits this failure mode, so we download the .torrent file ourselves with our
-    // configured UA and hand the bytes to qBt via multipart upload.
-    const torrentFile = await fetchTorrentFile(tokenUrl);
 
     const tags = [
       'harvester',
@@ -96,12 +102,24 @@ export function createDownloader(deps: {
     if (upLimit != null) addInput.upLimit = upLimit * 1024;
     await qbt.addTorrent(addInput);
 
-    // Verify post-add (5s settle + listTorrents lookup)
-    await new Promise((r) => setTimeout(r, 5000));
-    const after = await qbt.listTorrents({ tag: 'harvester' });
-    const added = after.find(
-      (t) => t.name === torrent.name && Math.abs(t.size - torrent.size_bytes) < 1024,
-    );
+    // Verify post-add: poll qBt up to ~10 s (2 s intervals) looking for a
+    // torrent whose hash matches the expected infohash. Name-match fallback
+    // kept for the rare case where we couldn't extract the infohash (not
+    // a valid bencoded file, etc.).
+    let added: Awaited<ReturnType<typeof qbt.listTorrents>>[number] | undefined;
+    for (let i = 0; i < 5 && !added; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      const after = await qbt.listTorrents({ tag: 'harvester' });
+      if (expectedInfohash) {
+        added = after.find((t) => t.hash.toLowerCase() === expectedInfohash);
+      } else {
+        added = after.find(
+          (t) =>
+            Math.abs(t.size - torrent.size_bytes) < 1024 &&
+            (t.name === torrent.name || within10sOfNow(t.added_on)),
+        );
+      }
+    }
     if (added) {
       logger.info(
         {
@@ -301,4 +319,16 @@ function deriveSavePath(_matched: Array<{ name: string }>): string | null {
 
 function deriveUpLimit(_matched: Array<{ name: string }>): number | null {
   return null;
+}
+
+/**
+ * Fallback heuristic used only when we couldn't extract an infohash from
+ * the .torrent bytes. True iff the qBt-reported `added_on` (unix seconds)
+ * is within the last 10 seconds, which covers the usual case where the
+ * add-then-verify round-trip completes in a couple seconds.
+ */
+function within10sOfNow(addedOnSec: number): boolean {
+  if (!addedOnSec) return false;
+  const delta = Math.floor(Date.now() / 1000) - addedOnSec;
+  return delta >= 0 && delta < 10;
 }

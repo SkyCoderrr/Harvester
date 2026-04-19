@@ -77,8 +77,13 @@ export function createPoller(deps: {
               free_disk_gib: (p) => freeGib(p ?? config.downloads.default_save_path),
             });
             if (decision.kind === 'GRABBED' && svc.allowed_client_ok) {
+              // downloader.enqueue is responsible for writing the definitive
+              // torrent_event row (GRABBED w/ infohash on success, ERROR w/
+              // rejection_reason on verify-fail). The poller previously wrote
+              // its own optimistic GRABBED row here too, which caused a
+              // double-entry on every grab (one with infohash, one without)
+              // and inflated dashboard grab counts. Don't write here.
               await downloader.enqueue(torrent, decision.matched, pollRunId);
-              insertDecision(torrent, 'RE_EVALUATED_GRABBED', decision.matched.map((m) => m.name).join(','), null);
               grabbed++;
               bus.emit('torrent.decision', {
                 type: 'torrent.decision',
@@ -100,8 +105,9 @@ export function createPoller(deps: {
         });
 
         if (decision.kind === 'GRABBED' && svc.allowed_client_ok) {
+          // See the RE_EVALUATED_GRABBED branch above — downloader.enqueue
+          // owns the torrent_event row for GRABBED outcomes. No insert here.
           await downloader.enqueue(torrent, decision.matched, pollRunId);
-          insertDecision(torrent, 'GRABBED', decision.matched.map((m) => m.name).join(','), null);
           grabbed++;
           bus.emit('torrent.decision', {
             type: 'torrent.decision',
