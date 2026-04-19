@@ -62,9 +62,20 @@ export function KpiTile({
 
 // -- Shared frame + header, used by VolumeTile / TorrentsTile / DiskTile ----
 
-export function TileFrame({ children }: { children: React.ReactNode }): JSX.Element {
+export function TileFrame({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}): JSX.Element {
   return (
-    <div className="bg-bg-sub border border-zinc-800 rounded-xl p-4 flex flex-col gap-2 min-h-[104px]">
+    <div
+      className={clsx(
+        'bg-bg-sub border border-zinc-800 rounded-xl p-4 flex flex-col gap-2 min-h-[104px]',
+        className,
+      )}
+    >
       {children}
     </div>
   );

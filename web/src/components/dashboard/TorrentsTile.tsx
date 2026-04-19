@@ -17,26 +17,29 @@ export function TorrentsTile({ data }: { data: DashboardSummary | undefined }): 
   ];
   const total = data?.harvester_torrent_count ?? cells.reduce((a, b) => a + b.value, 0);
 
+  // `col-span-2` goes on the TileFrame (the actual grid item) so CSS Grid's
+  // default `align-items: stretch` sizes it to the row's tallest sibling.
+  // An intermediate wrapper div would break that link and leave Torrents
+  // visually shorter whenever another tile's content (e.g. a delta pill)
+  // pushed the row past 104px.
   return (
-    <div className="col-span-2">
-      <TileFrame>
-        <TileHeader
-          icon={<Boxes className="h-3.5 w-3.5 text-accent" />}
-          tintBg="bg-accent/10"
-          label="Torrents"
-          right={
-            <span className="text-[10px] font-mono text-text-muted tabular-nums">
-              {total} total
-            </span>
-          }
-        />
-        <div className="mt-auto grid grid-cols-4 gap-3">
-          {cells.map((c) => (
-            <Cell key={c.label} label={c.label} value={c.value} tone={c.tone} />
-          ))}
-        </div>
-      </TileFrame>
-    </div>
+    <TileFrame className="col-span-2">
+      <TileHeader
+        icon={<Boxes className="h-3.5 w-3.5 text-accent" />}
+        tintBg="bg-accent/10"
+        label="Torrents"
+        right={
+          <span className="text-[10px] font-mono text-text-muted tabular-nums">
+            {total} total
+          </span>
+        }
+      />
+      <div className="mt-auto grid grid-cols-4 gap-3">
+        {cells.map((c) => (
+          <Cell key={c.label} label={c.label} value={c.value} tone={c.tone} />
+        ))}
+      </div>
+    </TileFrame>
   );
 }
 
