@@ -72,13 +72,13 @@ export function RatioChart(): JSX.Element {
   );
 
   return (
-    <Card title="Ratio & bonus" right={right}>
+    <Card title="Ratio & bonus" right={right} className="h-full">
       {q.isLoading ? (
         <ChartSkeleton />
       ) : data.length === 0 ? (
         <ChartEmpty text="No profile snapshots yet. The probe runs every 15 minutes." />
       ) : (
-        <div className="h-56">
+        <div className="flex-1 min-h-[224px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <defs>

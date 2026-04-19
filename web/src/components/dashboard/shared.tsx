@@ -21,10 +21,14 @@ export function Card({
   right?: React.ReactNode;
   className?: string;
 }): JSX.Element {
+  // `flex flex-col` + `flex-1` on the body makes the card fill whatever
+  // height the parent grid row gives it (e.g. h-full). Charts inside can
+  // then use `h-full` / `flex-1` to match a sibling card's height in the
+  // same row (fixes Speed-vs-Ratio mismatch).
   return (
     <section
       className={clsx(
-        'bg-bg-sub border border-zinc-800 rounded-lg overflow-hidden',
+        'bg-bg-sub border border-zinc-800 rounded-lg overflow-hidden flex flex-col',
         className,
       )}
     >
@@ -34,7 +38,7 @@ export function Card({
         </span>
         {right}
       </header>
-      <div className={pad ? 'p-4' : ''}>{children}</div>
+      <div className={clsx('flex-1 flex flex-col', pad && 'p-4')}>{children}</div>
     </section>
   );
 }
@@ -42,7 +46,7 @@ export function Card({
 export function ChartEmpty({ text }: { text: string }): JSX.Element {
   // FR-V2-56: one-sentence recovery guidance.
   return (
-    <div className="h-56 flex items-center justify-center text-sm text-text-muted text-center px-4">
+    <div className="flex-1 min-h-[224px] flex items-center justify-center text-sm text-text-muted text-center px-4">
       {text}
     </div>
   );
@@ -50,7 +54,7 @@ export function ChartEmpty({ text }: { text: string }): JSX.Element {
 
 export function ChartSkeleton(): JSX.Element {
   return (
-    <div className="h-56 flex items-center justify-center">
+    <div className="flex-1 min-h-[224px] flex items-center justify-center">
       <div className="h-4 w-4 border-2 border-text-muted border-t-transparent rounded-full animate-spin" />
     </div>
   );

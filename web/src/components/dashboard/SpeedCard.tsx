@@ -50,7 +50,7 @@ export function SpeedCard(): JSX.Element {
   const maxUp = items.reduce((m, s) => Math.max(m, s.upspeed), 0);
 
   return (
-    <section className="bg-bg-sub border border-zinc-800 rounded-lg overflow-hidden">
+    <section className="bg-bg-sub border border-zinc-800 rounded-lg overflow-hidden h-full flex flex-col">
       <header className="px-4 py-2.5 border-b border-zinc-800 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-4">
           <span className="text-xs uppercase tracking-wider text-text-muted font-medium">
@@ -88,7 +88,7 @@ export function SpeedCard(): JSX.Element {
           />
         </div>
       </header>
-      <div className="p-4">
+      <div className="p-4 flex-1 flex flex-col">
         {q.isLoading ? (
           <ChartSkeleton />
         ) : items.length === 0 ? (
@@ -129,7 +129,7 @@ function SplitSpeedChart({
   );
 
   return (
-    <div className="space-y-2">
+    <div className="flex-1 flex flex-col gap-2">
       <MiniSpeedChart data={downData} color="#3b82f6" label="Download" scale={scale} />
       <MiniSpeedChart data={upData} color="#22c55e" label="Upload" scale={scale} />
     </div>
@@ -155,7 +155,7 @@ function CombinedSpeedChart({
   );
 
   return (
-    <div className="h-56">
+    <div className="flex-1 min-h-[224px]">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
           <defs>
@@ -250,11 +250,11 @@ function MiniSpeedChart({
 }): JSX.Element {
   const gradId = `grad-${label}`;
   return (
-    <div>
+    <div className="flex-1 flex flex-col min-h-0">
       <div className="text-[10px] uppercase tracking-wider text-text-subtle mb-1 font-mono">
         {label}
       </div>
-      <div className="h-24">
+      <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
             <defs>

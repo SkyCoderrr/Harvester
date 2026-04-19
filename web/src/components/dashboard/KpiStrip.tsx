@@ -6,14 +6,16 @@ import { TorrentsTile } from './TorrentsTile';
 import { VolumeTile } from './VolumeTile';
 import { formatDurationShort } from '../../lib/format';
 
-// KPI strip: 7 tiles, all 1-wide, all the same height. Grid breakpoints:
-//   sm   2 cols  → 2x4 wrap
-//   md   4 cols  → 4 + 3
-//   xl   7 cols  → single row
+// KPI strip: 8-column grid at xl+. Single-wide KPI tiles span 1;
+// TorrentsTile spans 2 so its 4-bucket breakdown stays readable. All
+// tiles share TileFrame's fixed min height.
+//   sm   2 cols
+//   md   4 cols  → 4 + 4 wrap (Torrents takes 2 on the second row)
+//   xl   8 cols  → single row
 
 export function KpiStrip({ data }: { data: DashboardSummary | undefined }): JSX.Element {
   return (
-    <div className="grid gap-3 grid-cols-2 md:grid-cols-4 xl:grid-cols-7">
+    <div className="grid gap-3 grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
       <KpiTile
         label="Ratio"
         icon={TrendingUp}

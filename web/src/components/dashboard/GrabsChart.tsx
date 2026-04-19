@@ -56,13 +56,13 @@ export function GrabsChart(): JSX.Element {
   );
 
   return (
-    <Card title="Grabs per day — by discount" right={right}>
+    <Card title="Grabs per day — by discount" right={right} className="h-full">
       {q.isLoading ? (
         <ChartSkeleton />
       ) : pivot.data.length === 0 ? (
         <ChartEmpty text="No grabs yet. The poller fills this in as rules match on new torrents." />
       ) : (
-        <div className="h-56">
+        <div className="flex-1 min-h-[224px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={pivot.data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <XAxis

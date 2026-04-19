@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../../api/client';
-import { formatBytes } from '../../lib/format';
+import { formatBytesDecimal } from '../../lib/format';
 import { Card, ChartEmpty, ChartSkeleton } from './shared';
 import { SegmentedControl } from '../ui/SegmentedControl';
 
@@ -61,15 +61,25 @@ export function VolumeButterflyChart(): JSX.Element {
   );
 
   return (
-    <Card title="Upload vs download — volume" right={right}>
+    <Card title="Upload vs download — volume" right={right} className="h-full">
       {q.isLoading ? (
         <ChartSkeleton />
       ) : chartData.length === 0 ? (
         <ChartEmpty text="No profile snapshots yet. The probe runs every 15 minutes." />
       ) : (
-        <div className="h-56">
+        <div className="flex-1 min-h-[224px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+            {/* stackOffset=sign + shared stackId makes the two bars share the x
+                slot: uploaded stacks above 0, downloaded (pre-negated) stacks
+                below 0. Without this, Recharts rendered them side-by-side —
+                which is why the screenshot showed the bars offset to the
+                left/right of each day column instead of mirrored. */}
+            <BarChart
+              data={chartData}
+              margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+              stackOffset="sign"
+            >
+              <ReferenceLine y={0} stroke="#52525b" />
               <XAxis
                 dataKey="day"
                 tick={{ fontSize: 10, fill: '#a1a1aa' }}
@@ -80,8 +90,8 @@ export function VolumeButterflyChart(): JSX.Element {
                 tick={{ fontSize: 10, fill: '#a1a1aa' }}
                 axisLine={false}
                 tickLine={false}
-                width={60}
-                tickFormatter={(v: number) => formatBytes(Math.abs(v))}
+                width={70}
+                tickFormatter={(v: number) => formatBytesDecimal(Math.abs(v))}
               />
               <Tooltip
                 content={({ active, payload, label }) => {
@@ -97,8 +107,8 @@ export function VolumeButterflyChart(): JSX.Element {
                   return (
                     <div className="bg-bg-base border border-zinc-800 rounded-md px-3 py-2 shadow-lg text-xs font-mono">
                       <div className="text-text-muted mb-1">{label}</div>
-                      <div className="text-accent-success">Up: {formatBytes(up)}</div>
-                      <div className="text-accent">Down: {formatBytes(down)}</div>
+                      <div className="text-accent-success">Up: {formatBytesDecimal(up)}</div>
+                      <div className="text-accent">Down: {formatBytesDecimal(down)}</div>
                       <div className="text-text-muted">Ratio: {ratio}</div>
                       {baseline && (
                         <div className="text-accent-warn mt-1">
@@ -113,6 +123,7 @@ export function VolumeButterflyChart(): JSX.Element {
               <Bar
                 dataKey="uploaded"
                 name="Uploaded"
+                stackId="vol"
                 fill="#22c55e"
                 fillOpacity={0.85}
                 radius={[4, 4, 0, 0]}
@@ -120,6 +131,7 @@ export function VolumeButterflyChart(): JSX.Element {
               <Bar
                 dataKey="downloaded"
                 name="Downloaded"
+                stackId="vol"
                 fill="#3b82f6"
                 fillOpacity={0.85}
                 radius={[0, 0, 4, 4]}
