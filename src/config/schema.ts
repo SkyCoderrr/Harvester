@@ -31,6 +31,28 @@ export const configSchemaZ = z
       .object({
         interval_sec: z.number().int().min(60).max(3600).default(90),
         backoff_cap_sec: z.number().int().min(60).max(7200).default(1800),
+        // Which M-Team search modes to poll each tick. A single-mode
+        // search ('normal') misses torrents M-Team files under
+        // category-specific buckets (e.g. older catalog movies that
+        // don't show up in the default 'normal' feed). Default covers
+        // the four main non-adult content buckets; add 'adult' or
+        // switch to ['all'] to widen further.
+        modes: z
+          .array(
+            z.enum([
+              'normal',
+              'adult',
+              'movie',
+              'music',
+              'tvshow',
+              'waterfall',
+              'rss',
+              'rankings',
+              'all',
+            ]),
+          )
+          .min(1)
+          .default(['normal', 'movie', 'tvshow', 'music']),
         // Re-evaluation — keep checking previously-skipped or errored
         // torrents in subsequent polls. Duplicate downloads are blocked by
         // two layers that bypass these knobs entirely: (a) canReEval only
@@ -65,6 +87,7 @@ export const configSchemaZ = z
       .default({
         interval_sec: 90,
         backoff_cap_sec: 1800,
+        modes: ['normal', 'movie', 'tvshow', 'music'],
         reeval: { window_sec: 7 * 86400, max_attempts: 30, min_discount_headroom_sec: 600 },
       }),
     profile_probe: z

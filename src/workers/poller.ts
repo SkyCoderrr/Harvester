@@ -58,17 +58,35 @@ export function createPoller(deps: {
     let reSkipped = 0;
     logger.info({ component: 'poller', poll_run_id: pollRunId }, 'poll tick started');
     try {
-      const res = await mteam.search({
-        mode: 'normal',
-        pageSize: 50,
-        pageNumber: 1,
-        sortField: 'CREATED_DATE',
-        sortDirection: 'DESC',
-      });
-      seen = res.items.length;
+      // Fan out across every configured search mode and dedupe by mteam_id.
+      // A single-mode search ('normal') missed torrents M-Team files under
+      // category-specific buckets (movie catalog, music, etc.). Order
+      // doesn't matter for correctness since the same mteam_id describes
+      // the same torrent regardless of which bucket returned it.
+      const modes = config.poller.modes.length > 0 ? config.poller.modes : ['all' as const];
+      const byId = new Map<string, Parameters<typeof normalizeMTeamTorrent>[0]>();
+      for (const mode of modes) {
+        try {
+          const r = await mteam.search({
+            mode,
+            pageSize: 50,
+            pageNumber: 1,
+            sortField: 'CREATED_DATE',
+            sortDirection: 'DESC',
+          });
+          for (const item of r.items) {
+            const id = String(item.id);
+            if (!byId.has(id)) byId.set(id, item);
+          }
+        } catch (err) {
+          logger.warn({ component: 'poller', mode, err }, 'search mode failed — continuing');
+        }
+      }
+      const items = Array.from(byId.values());
+      seen = items.length;
       const rules: RuleSet[] = listRuleSetRows(db, true).map(rowToRuleSet);
 
-      for (const raw of res.items) {
+      for (const raw of items) {
         const torrent = normalizeMTeamTorrent(raw);
         // Blacklist gate: torrents the stuckChecker (or future watchdogs)
         // have given up on are skipped silently — no event row, no grab
