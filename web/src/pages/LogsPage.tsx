@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { api } from '../api/client';
-import { openTicketedEventSource } from '../api/sse';
+import { openTicketedSse, type TicketedSseHandle } from '../api/sse';
 import type { LogLevel, LogRow } from '@shared/types';
 
 const LEVELS: LogLevel[] = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
@@ -60,16 +60,12 @@ export default function LogsPage(): JSX.Element {
       setStreamOk(false);
       return;
     }
-    let es: EventSource | null = null;
+    let handle: TicketedSseHandle | null = null;
     let cancelled = false;
-    void openTicketedEventSource('/api/logs/stream', 'logs')
-      .then((source) => {
-        if (cancelled) {
-          source.close();
-          return;
-        }
-        es = source;
-        source.addEventListener('log', (e) => {
+    void openTicketedSse('/api/logs/stream', 'logs', {
+      onOpen: (es) => {
+        setStreamOk(true);
+        es.addEventListener('log', (e) => {
           try {
             const row = JSON.parse((e as MessageEvent).data) as LogRow;
             setRows((prev) => {
@@ -81,15 +77,22 @@ export default function LogsPage(): JSX.Element {
             /* ignore bad frames */
           }
         });
-        source.onopen = (): void => setStreamOk(true);
-        source.onerror = (): void => setStreamOk(false);
+      },
+      onError: () => setStreamOk(false),
+    })
+      .then((h) => {
+        if (cancelled) {
+          h.close();
+        } else {
+          handle = h;
+        }
       })
       .catch(() => {
         setStreamOk(false);
       });
     return () => {
       cancelled = true;
-      es?.close();
+      handle?.close();
     };
   }, [tailing]);
 

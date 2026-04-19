@@ -15,6 +15,7 @@ import { startWorkers, type WorkerSet } from './workers/index.js';
 import { createDownloader } from './workers/downloader.js';
 import { normalizeError } from './errors/index.js';
 import { benchArgon2 } from './auth/argon2.js';
+import { startWebhookDispatcher } from './webhooks/dispatcher.js';
 
 async function main(): Promise<void> {
   const paths = resolveAppPaths();
@@ -132,6 +133,10 @@ async function main(): Promise<void> {
     qbt,
   });
 
+  // FR-V2-43/44: subscribe webhook dispatcher to the bus. No-op until the
+  // user configures targets in settings.webhooks.targets.
+  const stopWebhooks = startWebhookDispatcher({ config: configStore, bus, logger });
+
   // Keep logger secrets in sync with config.
   configStore.on('change', (next) => {
     const secrets: string[] = [];
@@ -207,6 +212,7 @@ async function main(): Promise<void> {
     try {
       await Promise.race([
         (async () => {
+          stopWebhooks();
           if (workerSet) await workerSet.stopAll();
           await app.close();
           db.close();

@@ -7,6 +7,7 @@ import type { TorrentRow } from '@shared/types';
 import { formatBytes, formatEta, formatRate } from '../lib/format';
 import { toast } from '../store/toast';
 import { DiscountBadge } from '../components/ui/DiscountBadge';
+import { WhySkippedPanel } from '../components/torrents/WhySkippedPanel';
 
 export default function TorrentsPage(): JSX.Element {
   const q = useQuery({
@@ -314,6 +315,7 @@ function DetailDrawer({
           </button>
         </header>
         <section className="p-5 space-y-5 text-sm">
+          {q.data?.transitions && <WhySkippedPanel transitions={q.data.transitions} />}
           <KvBlock>
             <Kv k="Infohash" v={<code className="text-[10px] font-mono">{torrent.infohash}</code>} />
             <Kv k="Size" v={formatBytes(torrent.size_bytes)} />

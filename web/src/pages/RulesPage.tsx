@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { RuleSet } from '@shared/types';
 import { RuleCard } from '../components/rules/RuleCard';
+import { ImportExportBar } from '../components/rules/ImportExportBar';
 
 // Rules page v2 — composition only. Each rule-set renders through RuleCard;
 // form primitives, the JSON editor, and the dry-run panel live in
@@ -26,6 +27,12 @@ export default function RulesPage(): JSX.Element {
   }
   return (
     <div className="p-6 space-y-4 max-w-4xl">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="text-sm text-text-muted">
+          {items.length} rule-set{items.length === 1 ? '' : 's'} active on this instance.
+        </div>
+        <ImportExportBar rules={items} />
+      </div>
       {items.map((rs) => (
         <RuleCard key={rs.id} rs={rs} />
       ))}

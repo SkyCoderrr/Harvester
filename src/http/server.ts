@@ -104,6 +104,29 @@ export async function createHttpServer(deps: HttpDeps): Promise<FastifyInstance>
     );
   });
 
+  // FR-V2-13: strict security headers on every response. `script-src 'self'`
+  // would break Monaco (which self-hosts from /node_modules via Vite), so we
+  // allow `blob:` for worker-src where Monaco spawns its web workers. Inline
+  // styles are still permitted for recharts' inlined SVG styles.
+  app.addHook('onSend', async (_req, reply, payload) => {
+    void reply.header(
+      'Content-Security-Policy',
+      "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data:; " +
+        "font-src 'self' data:; " +
+        "connect-src 'self'; " +
+        "worker-src 'self' blob:; " +
+        "frame-ancestors 'none'; " +
+        "base-uri 'self'",
+    );
+    void reply.header('X-Frame-Options', 'DENY');
+    void reply.header('Referrer-Policy', 'no-referrer');
+    void reply.header('X-Content-Type-Options', 'nosniff');
+    return payload;
+  });
+
   app.setErrorHandler((err, req, reply) => {
     // FR-V2-01: zod failures from `schema.parse(req.body)` become 400 VALIDATION_FAILED.
     let herr: HarvesterError;

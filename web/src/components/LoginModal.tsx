@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Lock, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { api, HarvesterClientError } from '../api/client';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 export default function LoginModal(): JSX.Element | null {
   const loginOpen = useAuthStore((s) => s.loginOpen);
@@ -19,6 +20,14 @@ export default function LoginModal(): JSX.Element | null {
       setBusy(false);
     }
   }, [loginOpen]);
+
+  // FR-V2-15: trap focus inside the modal and close on Escape.
+  const trapRef = useFocusTrap<HTMLDivElement>({
+    active: loginOpen,
+    onEscape: () => {
+      if (!busy) closeLogin();
+    },
+  });
 
   if (!loginOpen) return null;
 
@@ -47,7 +56,13 @@ export default function LoginModal(): JSX.Element | null {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center backdrop-blur-sm">
-      <div className="w-full max-w-sm bg-bg-sub border border-zinc-800 rounded-lg shadow-2xl p-6">
+      <div
+        ref={trapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Sign in"
+        className="w-full max-w-sm bg-bg-sub border border-zinc-800 rounded-lg shadow-2xl p-6"
+      >
         <div className="flex items-center gap-3 mb-4">
           <Lock className="h-5 w-5 text-accent-warn" />
           <div>

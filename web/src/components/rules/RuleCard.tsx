@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Code, LayoutList, Loader2, Save } from 'lucide-react';
 import { api, HarvesterClientError } from '../../api/client';
-import type { Discount, RuleSet } from '@shared/types';
+import type { Discount, RuleSet, ScheduleSpec } from '@shared/types';
 import {
   DISCOUNT_BUCKETS,
   bucketSelected,
@@ -18,6 +18,7 @@ import {
 } from './primitives';
 import { DryRunPanel } from './DryRunPanel';
 import { JsonEditor } from './JsonEditor';
+import { ScheduleEditor } from './ScheduleEditor';
 
 type ViewMode = 'form' | 'json';
 
@@ -34,6 +35,7 @@ export function RuleCard({ rs }: { rs: RuleSet }): JSX.Element {
   const [maxSeeders, setMaxSeeders] = useState<number | null>(rs.rules.max_seeders);
   const [minLeechers, setMinLeechers] = useState<number | null>(rs.rules.min_leechers);
   const [maxLeechers, setMaxLeechers] = useState<number | null>(rs.rules.max_leechers ?? null);
+  const [schedule, setSchedule] = useState<ScheduleSpec | null>(rs.rules.schedule);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,6 +49,7 @@ export function RuleCard({ rs }: { rs: RuleSet }): JSX.Element {
     setMaxSeeders(rs.rules.max_seeders);
     setMinLeechers(rs.rules.min_leechers);
     setMaxLeechers(rs.rules.max_leechers ?? null);
+    setSchedule(rs.rules.schedule);
   }, [rs]);
 
   const dirty =
@@ -59,6 +62,7 @@ export function RuleCard({ rs }: { rs: RuleSet }): JSX.Element {
     maxSeeders !== rs.rules.max_seeders ||
     minLeechers !== rs.rules.min_leechers ||
     maxLeechers !== (rs.rules.max_leechers ?? null) ||
+    JSON.stringify(schedule) !== JSON.stringify(rs.rules.schedule) ||
     JSON.stringify([...whitelist].sort()) !==
       JSON.stringify([...rs.rules.discount_whitelist].sort());
 
@@ -78,6 +82,7 @@ export function RuleCard({ rs }: { rs: RuleSet }): JSX.Element {
           min_leechers: minLeechers,
           max_leechers: maxLeechers,
           leecher_seeder_ratio_min: rs.rules.leecher_seeder_ratio_min,
+          schedule,
         },
       };
       return api.put(`/api/rules/${rs.id}`, next);
@@ -266,6 +271,13 @@ export function RuleCard({ rs }: { rs: RuleSet }): JSX.Element {
                 min leechers must be ≤ max leechers
               </div>
             )}
+          </Field>
+
+          <Field
+            label="Schedule"
+            hint="Limit grabs to specific hours/days. If omitted, the rule-set is active at all times."
+          >
+            <ScheduleEditor value={schedule} onChange={setSchedule} />
           </Field>
 
           <DryRunPanel ruleId={rs.id} dirty={dirty} />

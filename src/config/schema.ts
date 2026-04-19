@@ -102,6 +102,34 @@ export const configSchemaZ = z
       })
       .default({ theme: 'dark', density: 'comfortable' }),
     first_run_completed: z.boolean().default(false),
+    // FR-V2-43 / FR-V2-44: out-of-band webhook endpoints. Each category maps
+    // to zero-or-more destinations. Empty map = no webhooks fire. URL is
+    // validated only as a string here; deliver-time fetch() is the actual
+    // validation. The 7 toast categories mirror the in-app toast registry.
+    webhooks: z
+      .object({
+        enabled: z.boolean().default(false),
+        targets: z
+          .record(
+            z.enum([
+              'grab_success',
+              'grab_failed',
+              'emergency',
+              'account_warning',
+              'preflight',
+              'lifecycle',
+              'error',
+            ]),
+            z.array(
+              z.object({
+                url: z.string().url(),
+                kind: z.enum(['discord', 'telegram', 'ntfy', 'generic']).default('generic'),
+              }),
+            ),
+          )
+          .default({}),
+      })
+      .default({ enabled: false, targets: {} }),
   })
   .refine(
     (cfg) => {
