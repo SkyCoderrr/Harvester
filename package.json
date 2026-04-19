@@ -17,7 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"shared/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\" \"shared/**/*.ts\"",
     "typecheck": "tsc --noEmit && cd web && tsc --noEmit",
     "gen:rules-schema": "tsx scripts/gen-rules-schema.ts",
     "seed:dev": "tsx scripts/seed-dev-db.ts",

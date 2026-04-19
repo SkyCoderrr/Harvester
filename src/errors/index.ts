@@ -9,7 +9,7 @@ export type ErrorCode =
   | 'MTEAM_AUTH_FAILED'
   | 'MTEAM_RATE_LIMITED'
   | 'MTEAM_UNAVAILABLE'
-  | 'MTEAM_FORBIDDEN_METHOD'
+  | 'MTEAM_REQUIRED_HEADER_MISSING'
   | 'MTEAM_BAD_RESPONSE'
   | 'QBT_UNREACHABLE'
   | 'QBT_AUTH_FAILED'
@@ -61,7 +61,7 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   MTEAM_AUTH_FAILED: 503,
   MTEAM_RATE_LIMITED: 503,
   MTEAM_UNAVAILABLE: 503,
-  MTEAM_FORBIDDEN_METHOD: 500,
+  MTEAM_REQUIRED_HEADER_MISSING: 500,
   MTEAM_BAD_RESPONSE: 502,
   QBT_UNREACHABLE: 503,
   QBT_AUTH_FAILED: 503,
@@ -91,7 +91,8 @@ export const USER_MESSAGES: Record<ErrorCode, string> = {
   MTEAM_AUTH_FAILED: 'M-Team rejected the API key. Verify it in Settings → M-Team.',
   MTEAM_UNAVAILABLE: 'M-Team is not reachable right now. Harvester will retry automatically.',
   MTEAM_RATE_LIMITED: 'Rate-limited by M-Team. Poll interval will back off automatically.',
-  MTEAM_FORBIDDEN_METHOD: 'An internal call hit a forbidden M-Team endpoint. Please file a bug.',
+  MTEAM_REQUIRED_HEADER_MISSING:
+    'An internal M-Team request omitted a required header (x-api-key / User-Agent). Please file a bug.',
   MTEAM_BAD_RESPONSE: 'M-Team returned an unexpected response. Harvester will retry.',
   QBT_UNREACHABLE:
     "qBittorrent isn't responding. Check that it's running and the credentials in Settings → qBittorrent.",

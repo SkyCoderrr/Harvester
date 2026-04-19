@@ -14,6 +14,7 @@ import { createHttpServer } from './http/server.js';
 import { startWorkers, type WorkerSet } from './workers/index.js';
 import { createDownloader } from './workers/downloader.js';
 import { normalizeError } from './errors/index.js';
+import { benchArgon2 } from './auth/argon2.js';
 
 async function main(): Promise<void> {
   const paths = resolveAppPaths();
@@ -33,6 +34,29 @@ async function main(): Promise<void> {
 
   const db = openDatabase(paths, logger);
   migrateRuleSets(db, logger);
+
+  // TECH_DEBT L1 (V2 drive-by): one-shot argon2 bench. Doesn't block startup —
+  // it runs in the background and logs a warning if cost is out of the
+  // ≥200 ms target band.
+  void benchArgon2()
+    .then((ms) => {
+      if (ms > 500) {
+        logger.warn(
+          { component: 'bootstrap', argon2_hash_ms: ms },
+          'argon2 hash cost is high — consider lowering memoryCost',
+        );
+      } else if (ms < 50) {
+        logger.warn(
+          { component: 'bootstrap', argon2_hash_ms: ms },
+          'argon2 hash cost is low — consider raising memoryCost',
+        );
+      } else {
+        logger.info({ component: 'bootstrap', argon2_hash_ms: ms }, 'argon2 bench ok');
+      }
+    })
+    .catch((err) => {
+      logger.warn({ component: 'bootstrap', err }, 'argon2 bench failed');
+    });
 
   const bus = createEventBus(logger);
   // Attach DB sink *after* the bus exists so `log.entry` events propagate to SSE.

@@ -23,3 +23,15 @@ export async function verifyPassword(hash: string, plain: string): Promise<boole
     return false;
   }
 }
+
+/**
+ * TECH_DEBT L1 (V2 drive-by): measure one argon2 hash under the live params.
+ * Called once at boot; surfaces a warning if the cost is far from the ≥200 ms
+ * target so the operator knows to tune `memoryCost`. Never mutates params.
+ */
+export async function benchArgon2(): Promise<number> {
+  const t0 = performance.now();
+  await argon2.hash('bench_argon2_probe_' + Date.now(), ARGON2_OPTS);
+  return Math.round(performance.now() - t0);
+}
+
