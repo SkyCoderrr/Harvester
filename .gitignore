@@ -3,6 +3,7 @@ dist/
 web/dist/
 coverage/
 *.log
+*.jsonl
 *.tsbuildinfo
 
 # OS
