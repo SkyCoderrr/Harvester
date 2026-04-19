@@ -1,19 +1,11 @@
 import { create } from 'zustand';
+import { toast as sonnerToast } from 'sonner';
 
-export interface Toast {
-  id: number;
-  kind: 'info' | 'success' | 'warn' | 'error';
-  title: string;
-  message?: string;
-  createdAt: number;
-  /** Category key for mute/filter; e.g. 'grab.success', 'grab.failed', 'auth'. */
-  category?: string;
-}
+// Migrated toast layer. Sonner owns rendering now; this module keeps the
+// domain-specific muting store + the `toast.*` helper so existing call sites
+// don't need to change. Category mute state still lives in localStorage and
+// is surfaced by the Settings → Notifications UI.
 
-/**
- * Known toast categories. Listed in Settings → Notifications so the user can mute
- * categories they don't want to see even if none have fired yet.
- */
 export const TOAST_CATEGORIES: Array<{ key: string; label: string; description: string }> = [
   {
     key: 'grab.success',
@@ -46,17 +38,18 @@ export const TOAST_CATEGORIES: Array<{ key: string; label: string; description: 
     label: 'Authentication',
     description: 'Failed sign-in attempts, rate-limit lockouts.',
   },
+  {
+    key: 'config',
+    label: 'Config updates',
+    description: 'Settings changes saved to disk (M-Team key, qBt credentials, …).',
+  },
 ];
 
-interface ToastStore {
-  items: Toast[];
+interface MuteStore {
   mutedCategories: Set<string>;
-  push(t: Omit<Toast, 'id' | 'createdAt'>): void;
-  dismiss(id: number): void;
   muteCategory(category: string, muted: boolean): void;
 }
 
-let nextId = 1;
 const PERSIST_KEY = 'harvester:toast:muted';
 
 function loadMuted(): Set<string> {
@@ -77,23 +70,8 @@ function persistMuted(s: Set<string>): void {
   }
 }
 
-export const useToastStore = create<ToastStore>((set, get) => ({
-  items: [],
+export const useToastStore = create<MuteStore>((set) => ({
   mutedCategories: loadMuted(),
-  push(t) {
-    const muted = get().mutedCategories;
-    if (t.category && muted.has(t.category)) return;
-    const id = nextId++;
-    set((s) => ({ items: [...s.items, { ...t, id, createdAt: Date.now() }] }));
-    // Auto-dismiss after 6s (errors stick around 12s)
-    const ttl = t.kind === 'error' ? 12_000 : 6_000;
-    setTimeout(() => {
-      set((s) => ({ items: s.items.filter((x) => x.id !== id) }));
-    }, ttl);
-  },
-  dismiss(id) {
-    set((s) => ({ items: s.items.filter((x) => x.id !== id) }));
-  },
   muteCategory(category, muted) {
     set((s) => {
       const next = new Set(s.mutedCategories);
@@ -105,18 +83,30 @@ export const useToastStore = create<ToastStore>((set, get) => ({
   },
 }));
 
-/** Helper wrapper for common toast shapes. */
+function shouldSkip(category?: string): boolean {
+  if (!category) return false;
+  return useToastStore.getState().mutedCategories.has(category);
+}
+
 export const toast = {
   info(title: string, message?: string, category?: string): void {
-    useToastStore.getState().push({ kind: 'info', title, message, category });
+    if (shouldSkip(category)) return;
+    sonnerToast.info(title, message ? { description: message } : undefined);
   },
   success(title: string, message?: string, category?: string): void {
-    useToastStore.getState().push({ kind: 'success', title, message, category });
+    if (shouldSkip(category)) return;
+    sonnerToast.success(title, message ? { description: message } : undefined);
   },
   warn(title: string, message?: string, category?: string): void {
-    useToastStore.getState().push({ kind: 'warn', title, message, category });
+    if (shouldSkip(category)) return;
+    sonnerToast.warning(title, message ? { description: message } : undefined);
   },
   error(title: string, message?: string, category?: string): void {
-    useToastStore.getState().push({ kind: 'error', title, message, category });
+    if (shouldSkip(category)) return;
+    sonnerToast.error(title, {
+      ...(message ? { description: message } : {}),
+      // Errors stick around longer than the 4s default.
+      duration: 12_000,
+    });
   },
 };

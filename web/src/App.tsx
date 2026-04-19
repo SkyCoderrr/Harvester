@@ -22,8 +22,9 @@ import TorrentsPage from './pages/TorrentsPage';
 import RulesPage from './pages/RulesPage';
 import SettingsPage from './pages/SettingsPage';
 import LogsPage from './pages/LogsPage';
-import ToastContainer from './components/ToastContainer';
+import { Toaster } from 'sonner';
 import LoginModal from './components/LoginModal';
+import { TooltipProvider } from './components/ui/Tooltip';
 
 export default function App(): JSX.Element {
   const settingsQ = useQuery({
@@ -40,39 +41,41 @@ export default function App(): JSX.Element {
 
   if (!firstRunDone) {
     return (
-      <>
+      <TooltipProvider delayDuration={300}>
         <Routes>
           <Route path="/first-run" element={<FirstRunPage />} />
           <Route path="*" element={<Navigate to="/first-run" replace />} />
         </Routes>
-        <ToastContainer />
+        <Toaster theme="dark" richColors closeButton position="bottom-right" />
         <LoginModal />
-      </>
+      </TooltipProvider>
     );
   }
 
   return (
-    <div className="flex h-full">
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <TopBar />
-        <main className="flex-1 overflow-auto">
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/first-run" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/torrents" element={<TorrentsPage />} />
-            <Route path="/rules" element={<RulesPage />} />
-            <Route path="/logs" element={<LogsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </main>
-        <Footer />
+    <TooltipProvider delayDuration={300}>
+      <div className="flex h-full">
+        <Sidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <TopBar />
+          <main className="flex-1 overflow-auto">
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/first-run" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/torrents" element={<TorrentsPage />} />
+              <Route path="/rules" element={<RulesPage />} />
+              <Route path="/logs" element={<LogsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
+        <Toaster theme="dark" richColors closeButton position="bottom-right" />
+        <LoginModal />
       </div>
-      <ToastContainer />
-      <LoginModal />
-    </div>
+    </TooltipProvider>
   );
 }
 

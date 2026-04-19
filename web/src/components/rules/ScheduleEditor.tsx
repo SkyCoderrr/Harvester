@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type { ScheduleSpec } from '@shared/types';
+import { Select } from '../ui/Select';
 
 // FR-V2-41 / FR-V2-42: UI over the existing ScheduleSpec shape already
 // consumed by isScheduleActive. Backend is unchanged.
@@ -88,21 +89,20 @@ export function ScheduleEditor({ value, onChange }: ScheduleEditorProps): JSX.El
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 text-xs text-text-muted">
-          <label>
-            Timezone:
-            <select
-              value={value.timezone}
-              onChange={(e) => setSchedule({ ...value, timezone: e.target.value })}
-              className="ml-1.5 px-2 py-1 bg-bg-elev border border-zinc-800 rounded font-mono"
-            >
-              <option value="system">system ({systemTz})</option>
-              <option value="UTC">UTC</option>
-              <option value="Asia/Taipei">Asia/Taipei</option>
-              <option value="America/New_York">America/New_York</option>
-              <option value="Europe/London">Europe/London</option>
-            </select>
-          </label>
+        <div className="flex items-center gap-2 text-xs text-text-muted">
+          <span>Timezone:</span>
+          <Select
+            value={value.timezone}
+            onValueChange={(tz) => setSchedule({ ...value, timezone: tz })}
+            aria-label="Schedule timezone"
+            options={[
+              { value: 'system', label: `system (${systemTz})` },
+              { value: 'UTC', label: 'UTC' },
+              { value: 'Asia/Taipei', label: 'Asia/Taipei' },
+              { value: 'America/New_York', label: 'America/New_York' },
+              { value: 'Europe/London', label: 'Europe/London' },
+            ]}
+          />
         </div>
         <button
           type="button"

@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
 import { Lock, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../store/auth';
 import { api, HarvesterClientError } from '../api/client';
-import { useFocusTrap } from '../hooks/useFocusTrap';
+
+// Migrated from hand-rolled modal + useFocusTrap to Radix Dialog. Radix
+// handles focus trap, scroll lock, Escape-to-close, and ARIA semantics
+// internally — so this component is just business logic + markup.
 
 export default function LoginModal(): JSX.Element | null {
   const loginOpen = useAuthStore((s) => s.loginOpen);
@@ -12,7 +16,6 @@ export default function LoginModal(): JSX.Element | null {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Clear state when closed.
   useEffect(() => {
     if (!loginOpen) {
       setPassword('');
@@ -21,21 +24,10 @@ export default function LoginModal(): JSX.Element | null {
     }
   }, [loginOpen]);
 
-  // FR-V2-15: trap focus inside the modal and close on Escape.
-  const trapRef = useFocusTrap<HTMLDivElement>({
-    active: loginOpen,
-    onEscape: () => {
-      if (!busy) closeLogin();
-    },
-  });
-
-  if (!loginOpen) return null;
-
   async function submit(): Promise<void> {
     if (!password) return;
     setBusy(true);
     setError(null);
-    // Set the token optimistically, then probe /api/service/state — which requires auth.
     setToken(password);
     try {
       await api.get('/api/service/state');
@@ -55,49 +47,63 @@ export default function LoginModal(): JSX.Element | null {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center backdrop-blur-sm">
-      <div
-        ref={trapRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Sign in"
-        className="w-full max-w-sm bg-bg-sub border border-zinc-800 rounded-lg shadow-2xl p-6"
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <Lock className="h-5 w-5 text-accent-warn" />
-          <div>
-            <h2 className="font-semibold">Sign in</h2>
-            <p className="text-xs text-text-muted">
-              This Harvester instance is protected. Enter the LAN access password.
-            </p>
-          </div>
-        </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void submit();
+    <Dialog.Root
+      open={loginOpen}
+      onOpenChange={(open) => {
+        if (!open && !busy) closeLogin();
+      }}
+    >
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0" />
+        <Dialog.Content
+          className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 bg-bg-sub border border-zinc-800 rounded-lg shadow-2xl p-6 focus:outline-none data-[state=open]:animate-in data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:zoom-out-95"
+          onEscapeKeyDown={(e) => {
+            if (busy) e.preventDefault();
           }}
-          className="space-y-3"
+          onInteractOutside={(e) => {
+            if (busy) e.preventDefault();
+          }}
         >
-          <input
-            autoFocus
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="w-full px-3 py-2 bg-bg-elev border border-zinc-800 rounded-md font-mono text-sm focus:border-accent outline-none"
-          />
-          {error && <div className="text-sm text-accent-danger">{error}</div>}
-          <button
-            type="submit"
-            disabled={!password || busy}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-accent rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+          <div className="flex items-center gap-3 mb-4">
+            <Lock className="h-5 w-5 text-accent-warn" aria-hidden />
+            <div>
+              <Dialog.Title className="font-semibold">Sign in</Dialog.Title>
+              <Dialog.Description className="text-xs text-text-muted">
+                This Harvester instance is protected. Enter the LAN access password.
+              </Dialog.Description>
+            </div>
+          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submit();
+            }}
+            className="space-y-3"
           >
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-            Sign in
-          </button>
-        </form>
-      </div>
-    </div>
+            <input
+              autoFocus
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full px-3 py-2 bg-bg-elev border border-zinc-800 rounded-md font-mono text-sm focus:border-accent outline-none"
+            />
+            {error && (
+              <div className="text-sm text-accent-danger" role="alert">
+                {error}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={!password || busy}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-accent rounded-md text-sm font-medium disabled:opacity-50 cursor-pointer"
+            >
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+              Sign in
+            </button>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
