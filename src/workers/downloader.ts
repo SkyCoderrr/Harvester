@@ -19,6 +19,7 @@ import {
 import { HarvesterError, normalizeError } from '../errors/index.js';
 import { GENDL_TOKEN_TTL_SEC } from '@shared/constants.js';
 import { unixSec } from '../util/time.js';
+import { fetchWithTimeout } from '../util/fetchWithTimeout.js';
 
 /**
  * Downloader. Event-driven via `enqueue()`; retry via `drainQueued()` from the grabRetry worker.
@@ -255,13 +256,15 @@ export function createDownloader(deps: {
   }
 
   async function fetchTorrentFile(tokenUrl: string): Promise<Buffer> {
-    const res = await fetch(tokenUrl, {
+    const res = await fetchWithTimeout(tokenUrl, {
       method: 'GET',
       headers: {
         'User-Agent': config.mteam.user_agent,
         Accept: 'application/x-bittorrent, */*',
       },
       redirect: 'follow',
+      // Bigger total timeout — .torrent files can be a few MiB.
+      totalTimeoutMs: 45_000,
     });
     if (!res.ok) {
       throw new HarvesterError({

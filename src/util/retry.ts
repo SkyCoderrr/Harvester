@@ -23,11 +23,23 @@ export async function withRetry<T>(fn: () => Promise<T>, opts: RetryOptions): Pr
       if (opts.onAttempt) opts.onAttempt(i, err);
       if (opts.shouldRetry && !opts.shouldRetry(err, i)) throw err;
       if (i >= opts.attempts) throw err;
-      const delay = Math.min(opts.baseMs * factor ** (i - 1), maxMs);
+      // FR-V2-12 / TECH_DEBT H6: full-jitter backoff. Adds 0..baseMs of
+      // randomness so concurrent retriers don't synchronize.
+      const pure = Math.min(opts.baseMs * factor ** (i - 1), maxMs);
+      const delay = pure + Math.floor(Math.random() * opts.baseMs);
       await sleep(delay, opts.signal);
     }
   }
   throw lastErr;
+}
+
+/**
+ * Compute a jittered delay (FR-V2-12). Standalone so worker timer loops can
+ * use it directly.
+ */
+export function backoffDelay(attempt: number, base = 1000, cap = 60_000): number {
+  const pure = Math.min(cap, base * 2 ** attempt);
+  return pure + Math.floor(Math.random() * base);
 }
 
 export function sleep(ms: number, signal?: AbortSignal): Promise<void> {

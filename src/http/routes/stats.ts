@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import type { HttpDeps } from '../server.js';
 import { unixSec } from '../../util/time.js';
 import { listStatsDaily } from '../../db/queries.js';
@@ -102,6 +103,36 @@ export function registerStatsRoutes(app: FastifyInstance, deps: HttpDeps): void 
       )
       .all(since) as Array<{ rule: string; grabs: number; skips: number; errors: number }>;
     return { ok: true, data: { items: rows } };
+  });
+
+  // FR-V2-33: per-day uploaded/downloaded delta time-series for the
+  // VolumeButterflyChart. Uses LAG() over the per-day MAX of profile_snapshots
+  // so it survives gaps in the polling cadence. The first row's LAG is 0, so
+  // its delta equals that day's max (documented; UI shows muted).
+  const profileVolumeQuery = z.object({
+    days: z.coerce.number().int().min(1).max(365).default(14),
+  });
+  app.get('/stats/profile-volume', async (req) => {
+    const { days } = profileVolumeQuery.parse(req.query);
+    const since = unixSec() - days * 86400;
+    const rows = deps.db
+      .prepare(
+        `WITH per_day AS (
+           SELECT date(ts, 'unixepoch', 'localtime') AS day,
+                  MAX(uploaded_bytes)   AS up_end,
+                  MAX(downloaded_bytes) AS down_end
+             FROM profile_snapshots
+            WHERE ts >= ?
+            GROUP BY day
+         )
+         SELECT day,
+                up_end   - LAG(up_end,   1, 0) OVER (ORDER BY day) AS uploaded_delta,
+                down_end - LAG(down_end, 1, 0) OVER (ORDER BY day) AS downloaded_delta
+           FROM per_day
+          ORDER BY day ASC`,
+      )
+      .all(since) as Array<{ day: string; uploaded_delta: number; downloaded_delta: number }>;
+    return { ok: true, data: { rows } };
   });
 
   // Rolled-up daily stats from stats_daily table (stats_daily rollup worker).

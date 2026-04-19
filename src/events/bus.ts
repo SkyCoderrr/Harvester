@@ -43,7 +43,10 @@ export interface EventBus {
 
 export function createEventBus(logger: Logger): EventBus {
   const em = new EventEmitter();
-  em.setMaxListeners(100);
+  // FR-V2-11 / TECH_DEBT H3: SSE handlers correctly off() on close, so the
+  // historical workaround of bumping MaxListeners to 100 is unneeded. Set to
+  // Infinity and rely on a metric to surface real leaks.
+  em.setMaxListeners(Infinity);
 
   function wrap<T>(fn: (ev: T) => void): (ev: T) => void {
     return (ev) => {

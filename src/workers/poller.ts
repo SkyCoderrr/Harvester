@@ -52,7 +52,7 @@ export function createPoller(deps: {
     const pollRunId = insertPollRun(db, unixSec());
     bus.emit('poll.started', { type: 'poll.started' });
     const cycleTimer = metrics.histogram('poll.cycle.duration_ms');
-    const t0 = Date.now();
+    const t0 = performance.now();
     let seen = 0;
     let grabbed = 0;
     try {
@@ -136,7 +136,7 @@ export function createPoller(deps: {
         torrents_seen: seen,
         torrents_grabbed: grabbed,
       });
-      cycleTimer.observe(Date.now() - t0);
+      cycleTimer.observe(performance.now() - t0);
     } catch (err) {
       const normalized = normalizeError(err);
       finishPollRun(db, pollRunId, {

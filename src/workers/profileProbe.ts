@@ -28,6 +28,11 @@ export function createProfileProbeWorker(deps: {
         bonus_points: snap.bonus_points,
         account_tier: snap.account_tier,
         raw_payload: JSON.stringify(snap.raw_payload),
+        warned: snap.warned,
+        leech_warn: snap.leech_warn,
+        vip: snap.vip,
+        seedtime_sec: snap.seedtime_sec,
+        leechtime_sec: snap.leechtime_sec,
       });
       bus.emit('kpi.delta', {
         type: 'kpi.delta',

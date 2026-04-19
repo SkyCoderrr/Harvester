@@ -167,6 +167,23 @@ export interface DashboardSummary {
   tier: string | null;
   tier_min_ratio: number | null;
   harvester_torrent_count: number;
+  // FR-V2-32: Phase-1 additive fields. All nullable so cold/empty DBs degrade
+  // to "—" in the UI rather than 0.
+  uploaded_bytes_total: number | null;
+  uploaded_bytes_24h: number | null;
+  uploaded_bytes_delta_24h: number | null;
+  downloaded_bytes_total: number | null;
+  downloaded_bytes_24h: number | null;
+  downloaded_bytes_delta_24h: number | null;
+  disk_total_gib: number | null;
+  disk_used_gib: number | null;
+  account_warned: 0 | 1 | null;
+  account_leech_warn: 0 | 1 | null;
+  account_vip: 0 | 1 | null;
+  seedtime_sec: number | null;
+  seedtime_sec_delta_24h: number | null;
+  // FR-V2-32: surface persisted user intent so the UI can show "Paused (user)"
+  service_desired_user_intent: 'running' | 'paused';
 }
 
 // -- Torrent row (for /api/torrents and UI table) --------------------------
@@ -325,6 +342,13 @@ export interface NormalizedProfile {
   account_tier: string | null;
   tier_min_ratio: number | null;
   raw_payload: unknown;
+  // FR-V2-30 / FR-V2-31: account-health + duration columns surfaced on the
+  // dashboard. 0/1 ints for the booleans; null seedtime/leechtime if missing.
+  warned: 0 | 1;
+  leech_warn: 0 | 1;
+  vip: 0 | 1;
+  seedtime_sec: number | null;
+  leechtime_sec: number | null;
 }
 
 /** Search-result row in M-Team's shape. See spike §5. */

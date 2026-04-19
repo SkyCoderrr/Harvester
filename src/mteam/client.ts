@@ -4,6 +4,7 @@ import type { ConfigStore } from '../config/store.js';
 import type { MTeamProfile, MTeamSearchResult, MTeamTorrent } from '@shared/types.js';
 import { HarvesterError } from '../errors/index.js';
 import { withRetry } from '../util/retry.js';
+import { fetchWithTimeout, FetchTimeoutError } from '../util/fetchWithTimeout.js';
 
 /**
  * Raw M-Team client based on spike findings (spike/SPIKE_REPORT.md).
@@ -83,20 +84,18 @@ export function createMTeamClient(
     };
     if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
 
-    const controller = new AbortController();
-    const to = setTimeout(() => controller.abort(), opts.timeoutMs ?? 15_000);
-    const t0 = Date.now();
+    const t0 = performance.now();
     callsTotal.inc();
     try {
-      const init: RequestInit = {
+      const init: Parameters<typeof fetchWithTimeout>[1] = {
         method: opts.method ?? 'POST',
         headers,
-        signal: controller.signal,
+        totalTimeoutMs: opts.timeoutMs ?? 15_000,
       };
       if (opts.body !== undefined) init.body = JSON.stringify(opts.body);
-      const res = await fetch(url, init);
+      const res = await fetchWithTimeout(url, init);
       const text = await res.text();
-      timerDuration.observe(Date.now() - t0);
+      timerDuration.observe(performance.now() - t0);
 
       // Non-2xx is rare but possible — treat as MTEAM_UNAVAILABLE.
       if (!res.ok) {
@@ -150,7 +149,7 @@ export function createMTeamClient(
     } catch (err) {
       if (err instanceof HarvesterError) throw err;
       callsErrors.inc();
-      if ((err as Error).name === 'AbortError') {
+      if (err instanceof FetchTimeoutError || (err as Error).name === 'AbortError') {
         throw new HarvesterError({
           code: 'MTEAM_UNAVAILABLE',
           user_message: 'M-Team request timed out.',
@@ -164,8 +163,6 @@ export function createMTeamClient(
         retryable: true,
         cause: err,
       });
-    } finally {
-      clearTimeout(to);
     }
   }
 

@@ -72,11 +72,22 @@ export function createLoopWorker(opts: LoopWorkerOpts): LoopWorker {
     start() {
       if (timer) return;
       stopped = false;
+      // FR-V2-12: stagger the first tick by ±15% so workers that share an
+      // interval don't synchronize. runOnStart === true keeps semantics (the
+      // tick still runs near the start), it just isn't bunched up.
+      const interval = Math.max(100, opts.intervalMs());
+      const jitter = Math.floor(interval * (Math.random() - 0.5) * 0.3);
+      const firstDelay = Math.max(0, jitter);
       if (opts.runOnStart !== false) {
         lastTickWallMs = Date.now();
-        void runTick();
+        timer = setTimeout(() => {
+          void runTick();
+        }, firstDelay);
       } else {
-        schedule();
+        nextTickAt = Date.now() + interval + jitter;
+        timer = setTimeout(() => {
+          void runTick();
+        }, interval + jitter);
       }
     },
     async stop() {

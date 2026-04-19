@@ -2,6 +2,7 @@ import type { Logger } from '../logger/index.js';
 import type { Metrics } from '../observability/metrics.js';
 import type { ConfigStore } from '../config/store.js';
 import { HarvesterError } from '../errors/index.js';
+import { fetchWithTimeout } from '../util/fetchWithTimeout.js';
 
 /**
  * qBittorrent WebUI v2 client.
@@ -74,6 +75,11 @@ export function createQbtClient(
   metrics: Metrics,
 ): QbtClient {
   let sid: string | null = null;
+  // FR-V2-10: collapse concurrent re-auth attempts. If a login is in-flight,
+  // every other caller awaits the same promise instead of triggering another
+  // POST /api/v2/auth/login. Reset to null in finally so subsequent failures
+  // can retry from scratch.
+  let loginInflight: Promise<void> | null = null;
   const callsTotal = metrics.counter('qbt.calls.total');
   const callsErrors = metrics.counter('qbt.calls.errors');
   const callDuration = metrics.histogram('qbt.calls.duration_ms');
@@ -83,15 +89,23 @@ export function createQbtClient(
     return `http://${c.qbt.host}:${c.qbt.port}`;
   }
 
-  async function login(): Promise<void> {
-    const t0 = Date.now();
+  function login(): Promise<void> {
+    if (loginInflight) return loginInflight;
+    loginInflight = doLogin().finally(() => {
+      loginInflight = null;
+    });
+    return loginInflight;
+  }
+
+  async function doLogin(): Promise<void> {
+    const t0 = performance.now();
     callsTotal.inc();
     const config = configStore.get();
     const body = new URLSearchParams();
     body.set('username', config.qbt.user);
     body.set('password', config.qbt.password);
     try {
-      const res = await fetch(baseUrl() + '/api/v2/auth/login', {
+      const res = await fetchWithTimeout(baseUrl() + '/api/v2/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -99,7 +113,7 @@ export function createQbtClient(
         },
         body,
       });
-      callDuration.observe(Date.now() - t0);
+      callDuration.observe(performance.now() - t0);
       const text = await res.text();
       if (res.status === 403) {
         callsErrors.inc();
@@ -147,7 +161,7 @@ export function createQbtClient(
     opts: { method?: 'GET' | 'POST'; body?: URLSearchParams | FormData; parse?: 'json' | 'text' } = {},
   ): Promise<T> {
     await ensureSession();
-    const t0 = Date.now();
+    const t0 = performance.now();
     callsTotal.inc();
     try {
       let res = await doRequest(path, opts);
@@ -158,7 +172,7 @@ export function createQbtClient(
         await login();
         res = await doRequest(path, opts);
       }
-      callDuration.observe(Date.now() - t0);
+      callDuration.observe(performance.now() - t0);
       if (res.status === 404) {
         throw new HarvesterError({
           code: 'QBT_BAD_RESPONSE',
@@ -216,7 +230,7 @@ export function createQbtClient(
       }
       init.body = opts.body;
     }
-    return fetch(baseUrl() + path, init);
+    return fetchWithTimeout(baseUrl() + path, init);
   }
 
   return {

@@ -19,11 +19,39 @@ const MIGRATIONS: Record<number, MigrationFn> = {
   // 1 → 2 will go here later. v1 is terminal today.
 };
 
+// FR-V2-64 / STATUS K1: one-shot rename of the historical "default" rule set
+// to "FREE and 2X_FREE". Idempotent via a sentinel row in schema_migrations
+// using version=999 (does NOT participate in the sequential file-based
+// migration numbering — see db/migrate.ts gap check, which only validates
+// the on-disk *.sql sequence, not applied rows).
+const RULE_RENAME_SENTINEL_VERSION = 999;
+
+function renameDefaultRuleset(db: Db, logger: Logger): void {
+  const already = db
+    .prepare('SELECT 1 FROM schema_migrations WHERE version = ?')
+    .get(RULE_RENAME_SENTINEL_VERSION);
+  if (already) return;
+  const r = db
+    .prepare(`UPDATE rule_sets SET name = 'FREE and 2X_FREE' WHERE name = 'default'`)
+    .run();
+  db.prepare('INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (?, ?)').run(
+    RULE_RENAME_SENTINEL_VERSION,
+    Math.floor(Date.now() / 1000),
+  );
+  if (r.changes > 0) {
+    logger.info(
+      { component: 'rules', renamed: r.changes },
+      'renamed default rule-set → FREE and 2X_FREE',
+    );
+  }
+}
+
 /**
  * Migrate any rule_sets rows with schema_version < CURRENT_SCHEMA. Archives the old
  * version before overwriting. v1 is terminal today, so this is a validate-only pass.
  */
 export function migrateRuleSets(db: Db, logger: Logger): void {
+  renameDefaultRuleset(db, logger);
   const rows = listRuleSetRows(db);
   for (const row of rows) {
     if (row.schema_version === CURRENT_SCHEMA) continue;

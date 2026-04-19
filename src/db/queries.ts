@@ -99,6 +99,13 @@ export interface ProfileSnapshotRow {
   bonus_points: number | null;
   account_tier: string | null;
   raw_payload: string | null;
+  // FR-V2-30 columns. NewProfileSnapshotRow makes these optional for callers
+  // that don't have them yet; insert defaults to 0 / null.
+  warned?: 0 | 1;
+  leech_warn?: 0 | 1;
+  vip?: 0 | 1;
+  seedtime_sec?: number | null;
+  leechtime_sec?: number | null;
 }
 
 export interface ServiceStateRow {
@@ -441,8 +448,9 @@ export function insertProfileSnapshot(db: Db, row: ProfileSnapshotRow): number {
   const r = db
     .prepare(
       `INSERT INTO profile_snapshots
-       (ts, uploaded_bytes, downloaded_bytes, ratio, bonus_points, account_tier, raw_payload)
-       VALUES (?,?,?,?,?,?,?)`,
+       (ts, uploaded_bytes, downloaded_bytes, ratio, bonus_points, account_tier, raw_payload,
+        warned, leech_warn, vip, seedtime_sec, leechtime_sec)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
     )
     .run(
       row.ts,
@@ -452,6 +460,11 @@ export function insertProfileSnapshot(db: Db, row: ProfileSnapshotRow): number {
       row.bonus_points,
       row.account_tier,
       row.raw_payload,
+      row.warned ?? 0,
+      row.leech_warn ?? 0,
+      row.vip ?? 0,
+      row.seedtime_sec ?? null,
+      row.leechtime_sec ?? null,
     );
   return Number(r.lastInsertRowid);
 }
@@ -460,6 +473,19 @@ export function getLatestProfileSnapshot(db: Db): ProfileSnapshotRow | undefined
   return db
     .prepare('SELECT * FROM profile_snapshots ORDER BY ts DESC LIMIT 1')
     .get() as ProfileSnapshotRow | undefined;
+}
+
+/**
+ * FR-V2-32: profile snapshot at-or-before a given unix-second cutoff.
+ * Used to compute 24h deltas for uploaded/downloaded/seedtime KPI tiles.
+ */
+export function getProfileSnapshotAtOrBefore(
+  db: Db,
+  ts: number,
+): ProfileSnapshotRow | undefined {
+  return db
+    .prepare('SELECT * FROM profile_snapshots WHERE ts <= ? ORDER BY ts DESC LIMIT 1')
+    .get(ts) as ProfileSnapshotRow | undefined;
 }
 
 // -- Service state ---------------------------------------------------------

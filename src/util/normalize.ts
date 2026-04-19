@@ -58,6 +58,9 @@ export function normalizeMTeamProfile(
   const signup = parseMTeamDate(raw.createdDate);
   const weeks = signup == null ? 0 : Math.max(0, (unixSec() - signup) / (7 * 86400));
   const { tier, min_ratio } = pickTier(tierThresholds, weeks);
+  const status = raw.memberStatus ?? ({} as MTeamProfile['memberStatus']);
+  const seedtimeSec = toIntOrNull(raw.seedtime);
+  const leechtimeSec = toIntOrNull(raw.leechtime);
   return {
     ts: unixSec(),
     uploaded_bytes: uploaded,
@@ -68,7 +71,29 @@ export function normalizeMTeamProfile(
     account_tier: tier,
     tier_min_ratio: min_ratio,
     raw_payload: raw,
+    // FR-V2-31: extract the new fields from the raw payload. Fail-open.
+    warned: boolToBit(status.warned),
+    leech_warn: boolToBit(status.leechWarn),
+    vip: boolToBit(status.vip),
+    seedtime_sec: seedtimeSec,
+    leechtime_sec: leechtimeSec,
   };
+}
+
+function boolToBit(v: unknown): 0 | 1 {
+  if (typeof v === 'boolean') return v ? 1 : 0;
+  if (typeof v === 'number') return v ? 1 : 0;
+  if (typeof v === 'string') {
+    const s = v.toLowerCase();
+    if (s === 'true' || s === '1' || s === 'yes') return 1;
+  }
+  return 0;
+}
+
+function toIntOrNull(v: unknown): number | null {
+  if (v == null || v === '') return null;
+  const n = typeof v === 'number' ? v : parseInt(String(v), 10);
+  return Number.isFinite(n) ? n : null;
 }
 
 function pickTier(
