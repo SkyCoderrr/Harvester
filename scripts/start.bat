@@ -1,10 +1,10 @@
 @echo off
 setlocal
 
-REM Harvester launcher. Installs dependencies if needed, builds the server
-REM and web UI if either output is missing, then runs the compiled release
-REM via `npm start`. To run from source instead (no build step, tsx loader),
-REM use `npm run dev`.
+REM Harvester launcher. Installs dependencies if missing, builds the
+REM server and web UI if either output is absent, starts the backend
+REM (which serves the built UI on the same port via @fastify/static),
+REM and opens a browser to the local URL.
 
 set SCRIPT_DIR=%~dp0
 pushd "%SCRIPT_DIR%.."
@@ -35,7 +35,18 @@ if not exist "web\dist\index.html" (
   if errorlevel 1 (echo web build failed & popd & exit /b 1)
 )
 
-echo Starting Harvester...
+REM Resolve the backend port from the user's config (default 5173).
+set PORT=5173
+for /f "delims=" %%P in ('node -e "try{console.log(JSON.parse(require('fs').readFileSync(process.env.APPDATA+'\\Harvester\\config.json','utf8')).port||5173)}catch{console.log(5173)}"') do set PORT=%%P
+if "%PORT%"=="" set PORT=5173
+
+echo Starting Harvester at http://127.0.0.1:%PORT%/ ...
+
+REM Open the browser a few seconds after launch so the server has time
+REM to bind the port. Runs detached; hidden PowerShell window exits
+REM immediately after issuing Start-Process.
+start "" powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep 3; Start-Process 'http://127.0.0.1:%PORT%/'"
+
 call npm start
 set EXITCODE=%ERRORLEVEL%
 popd
