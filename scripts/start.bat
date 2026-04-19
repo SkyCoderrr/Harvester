@@ -47,10 +47,12 @@ if "%PORT%"=="" set PORT=5173
 
 echo Starting Harvester at http://%HOST%:%PORT%/ ...
 
-REM Open the browser a few seconds after launch so the server has time
-REM to bind the port. Runs detached; hidden PowerShell exits immediately
-REM after issuing Start-Process.
-start "" powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep 3; Start-Process 'http://%HOST%:%PORT%/'"
+REM Launch the browser asynchronously via the open-browser helper. We
+REM used to do this with `powershell -Command "Start-Process ..."` but
+REM that swallowed the URL in some shells and the browser would land on
+REM the wrong port. The helper is plain cmd + `start ""` which is the
+REM canonical Windows URL handler.
+start "Harvester browser" /B "%SCRIPT_DIR%open-browser.bat" "http://%HOST%:%PORT%/"
 
 call npm start
 set EXITCODE=%ERRORLEVEL%
